@@ -1,0 +1,45 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="card-title text-center mb-4">Crear Nueva Peluquería (Solo Admin)</h2>
+          <form [formGroup]="peluqueriaForm" (ngSubmit)="onSubmit()">
+            <div class="mb-3">
+              <label for="nombrePeluqueria" class="form-label">Nombre de la Peluquería</label>
+              <input type="text" id="nombrePeluqueria" formControlName="nombre" class="form-control"
+                     [ngClass]="{ 'is-invalid': peluqueriaForm.get('nombre')?.touched && peluqueriaForm.get('nombre')?.invalid }">
+              <div *ngIf="peluqueriaForm.get('nombre')?.touched && peluqueriaForm.get('nombre')?.errors?.['required']" class="invalid-feedback">
+                El nombre es requerido.
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="direccionPeluqueria" class="form-label">Dirección</label>
+              <input type="text" id="direccionPeluqueria" formControlName="direccion" class="form-control"
+                     [ngClass]="{ 'is-invalid': peluqueriaForm.get('direccion')?.touched && peluqueriaForm.get('direccion')?.invalid }">
+              <div *ngIf="peluqueriaForm.get('direccion')?.touched && peluqueriaForm.get('direccion')?.errors?.['required']" class="invalid-feedback">
+                La dirección es requerida.
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="telefonoPeluqueria" class="form-label">Teléfono</label>
+              <input type="tel" id="telefonoPeluqueria" formControlName="telefono" class="form-control"
+                     [ngClass]="{ 'is-invalid': peluqueriaForm.get('telefono')?.touched && peluqueriaForm.get('telefono')?.invalid }">
+              <div *ngIf="peluqueriaForm.get('telefono')?.touched && peluqueriaForm.get('telefono')?.errors?.['required']" class="invalid-feedback">
+                El teléfono es requerido.
+              </div>
+              <div *ngIf="peluqueriaForm.get('telefono')?.touched && peluqueriaForm.get('telefono')?.errors?.['pattern']" class="invalid-feedback">
+                El teléfono solo debe contener números.
+              </div>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary" [disabled]="peluqueriaForm.invalid">Crear Peluquería</button>
+            </div>
+          </form>
+          <div *ngIf="mensajeExito" class="alert alert-success mt-3 p-2 text-center">{{ mensajeExito }}</div>
+          <div *ngIf="mensajeError" class="alert alert-danger mt-3 p-2 text-center">{{ mensajeError }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

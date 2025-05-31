@@ -1,0 +1,39 @@
+<div class="row justify-content-center mt-5">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="card-title text-center mb-4">Iniciar Sesión</h2>
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email (Cliente o Empleado)</label>
+            <input type="email" id="email" formControlName="email" class="form-control"
+                   [ngClass]="{ 'is-invalid': loginForm.get('email')?.touched && loginForm.get('email')?.invalid }">
+            <div *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.errors?.['required']" class="invalid-feedback">
+              El email es requerido.
+            </div>
+            <div *ngIf="loginForm.get('email')?.touched && loginForm.get('email')?.errors?.['email']" class="invalid-feedback">
+              Formato de email inválido.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Contraseña</label>
+            <input type="password" id="password" formControlName="password" class="form-control"
+                   [ngClass]="{ 'is-invalid': loginForm.get('password')?.touched && loginForm.get('password')?.invalid }">
+            <div *ngIf="loginForm.get('password')?.touched && loginForm.get('password')?.errors?.['required']" class="invalid-feedback">
+              La contraseña es requerida.
+            </div>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary" [disabled]="loginForm.invalid">Iniciar Sesión</button>
+          </div>
+          <div *ngIf="errorMessage" class="alert alert-danger mt-3 p-2 text-center">{{ errorMessage }}</div>
+        </form>
+        <hr class="my-4">
+        <p class="text-center">¿No tienes cuenta?</p>
+        <div class="d-grid gap-2">
+            <a class="btn btn-outline-secondary" routerLink="/auth/register-cliente">Crear Cuenta Cliente</a>
+            </div>
+      </div>
+    </div>
+  </div>
+</div>

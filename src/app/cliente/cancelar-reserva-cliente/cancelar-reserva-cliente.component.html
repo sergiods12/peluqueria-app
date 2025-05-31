@@ -1,0 +1,39 @@
+<div class="container mt-4">
+  <h2 class="mb-4">Mis Próximas Reservas</h2>
+
+  <div *ngIf="isLoading" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando...</span>
+    </div>
+    <p>Cargando tus reservas...</p>
+  </div>
+
+  <div *ngIf="!isLoading && mensajeExito" class="alert alert-success">{{ mensajeExito }}</div>
+  <div *ngIf="!isLoading && mensajeError" class="alert alert-danger">{{ mensajeError }}</div>
+
+  <div *ngIf="!isLoading && misReservas.length === 0 && !mensajeError" class="alert alert-info">
+    No tienes reservas futuras activas.
+  </div>
+
+  <div *ngIf="!isLoading && misReservas.length > 0" class="list-group shadow-sm">
+    <div *ngFor="let reserva of misReservas" class="list-group-item list-group-item-action flex-column align-items-start mb-2">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">{{ reserva.servicio?.nombre || 'Servicio no especificado' }}</h5>
+        <small class="text-muted">{{ reserva.fecha | date:'fullDate' }}</small>
+      </div>
+      <p class="mb-1">
+        <strong>Hora:</strong> {{ reserva.horaInicio }} - {{ reserva.horaFin }} <br>
+        <strong>Peluquero:</strong> {{ reserva.empleado?.nombre || 'No asignado' }} <br>
+        <strong>Peluquería:</strong> {{ reserva.empleado?.peluqueria?.nombre || 'No especificada' }}
+      </p>
+      <div class="mt-2">
+        <button class="btn btn-outline-danger btn-sm" (click)="cancelarReserva(reserva)">
+          <i class="bi bi-x-circle"></i> Cancelar Reserva
+        </button>
+        </div>
+    </div>
+  </div>
+   <p class="mt-3 text-muted fst-italic" *ngIf="!isLoading && currentUser && misReservas.length === 0 && !mensajeError">
+    (Nota: La funcionalidad de cargar reservas podría estar usando datos simulados o filtrados. Asegúrate de que el backend tenga un endpoint dedicado para las reservas del cliente.)
+  </p>
+</div>

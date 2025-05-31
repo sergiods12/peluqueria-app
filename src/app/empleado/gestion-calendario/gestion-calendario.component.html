@@ -1,0 +1,70 @@
+<div class="container mt-4">
+  <h2 class="mb-4">Mi Calendario y Disponibilidad</h2>
+
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <label for="fechaGestion" class="form-label">Selecciona Fecha:</label>
+      <input type="date" id="fechaGestion" class="form-control" 
+             [(ngModel)]="fechaSeleccionada" 
+             (ngModelChange)="cargarTramosParaEmpleado()"
+             [min]="minDate">
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="text-center my-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando horarios...</span>
+    </div>
+  </div>
+
+  <div *ngIf="mensaje" class="alert alert-info my-3">{{ mensaje }}</div>
+
+  <div *ngIf="!isLoading && fechaSeleccionada && currentUser">
+    <h4 class="mb-3">Horarios para el <mark>{{ fechaSeleccionada | date:'dd/MM/yyyy' }}</mark></h4>
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-2">
+      <div class="col" *ngFor="let tramo of tramosDelDiaParaVista">
+        <div class="card h-100 text-center" 
+             [ngClass]="{
+               'border-success': tramo.estado === 'disponible',
+               'border-danger': tramo.estado === 'reservadoCliente',
+               'border-warning': tramo.estado === 'bloqueadoEmpleado',
+               'border-light': tramo.estado === 'noDefinido'
+             }">
+          <div class="card-body d-flex flex-column justify-content-between p-2">
+            <h6 class="card-title mb-1">{{ tramo.horaInicio }} - {{ tramo.horaFin }}</h6>
+
+            <div *ngIf="tramo.estado === 'disponible'" class="text-success small my-1">
+              <i class="bi bi-check-circle-fill"></i> Disponible
+            </div>
+            <div *ngIf="tramo.estado === 'reservadoCliente'" class="text-danger small my-1">
+              <i class="bi bi-person-fill-check"></i> Reservado por:<br><strong>{{ tramo.clienteNombre }}</strong><br>
+              <span class="fst-italic">({{ tramo.servicioNombre || 'Servicio' }})</span>
+            </div>
+            <div *ngIf="tramo.estado === 'bloqueadoEmpleado'" class="text-warning small my-1">
+              <i class="bi bi-slash-circle-fill"></i> Bloqueado
+            </div>
+            <div *ngIf="tramo.estado === 'noDefinido'" class="text-muted small my-1">
+              No definido
+            </div>
+
+            <button type="button" class="btn btn-sm w-100 mt-auto"
+                    [ngClass]="{
+                      'btn-outline-success': tramo.estado === 'noDefinido' || tramo.estado === 'bloqueadoEmpleado',
+                      'btn-outline-warning': tramo.estado === 'disponible',
+                      'btn-outline-danger': tramo.estado === 'reservadoCliente'
+                    }"
+                    (click)="handleClickTramo(tramo)">
+              <span *ngIf="tramo.estado === 'noDefinido'">Marcar Disponible</span>
+              <span *ngIf="tramo.estado === 'disponible'">Bloquear Tramo</span>
+              <span *ngIf="tramo.estado === 'bloqueadoEmpleado'">Marcar Disponible</span>
+              <span *ngIf="tramo.estado === 'reservadoCliente'">Cancelar Cita</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="!isLoading && (!fechaSeleccionada || !currentUser)" class="alert alert-secondary">
+    Por favor, selecciona una fecha para ver y gestionar los horarios.
+  </div>
+</div>
