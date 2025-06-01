@@ -1,78 +1,81 @@
+// src/app/cliente/reservar-cita/reservar-cita.component.scss
 .tramo-card {
-  border: 1px solid #e0e0e0; // Neutral border
-  border-radius: 0.375rem; // Bootstrap's default card border-radius
-  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  min-height: 65px; // Ensure a consistent height for cards
-  font-size: 0.85rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.375rem;
+  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-color 0.2s ease-in-out;
+  min-height: 60px;
+  font-size: 0.8rem;
 
   .card-body {
-    padding: 0.5rem; // Reduced padding
+    padding: 0.4rem;
   }
 
   .tramo-time {
     font-weight: 500;
-    font-size: 0.9rem;
-    margin-bottom: 0.25rem !important;
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem !important;
   }
 
   .tramo-status {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     display: block;
+    margin-top: 2px;
   }
 
-  // Base for non-interactive states (Default Grey)
-  &.tramo-unavailable, // Not defined by employee or backend
-  &.tramo-available-not-clickable { // Defined, but not a valid start for current service duration
-    background-color: #e9ecef; // Bootstrap light grey
-    color: #6c757d;            // Muted text
+  // Default for non-interactive slots or slots that cannot start a service
+  &.tramo-unavailable,
+  &.tramo-available-not-clickable {
+    background-color: #f0f0f0; // Light grey
+    color: #888;
     cursor: not-allowed;
-    border-color: #ced4da;
+    border-color: #ddd;
   }
 
-  // Clickable & Available (but not yet selected) - User Requirement: Grey
+  // Clickable & Available (but not selected) - User requirement: Grey
   &.tramo-available-clickable {
-    background-color: #f8f9fa; // A slightly different grey or a very light blue if distinction is needed
-    color: #343a40;
-    border: 1px solid #adb5bd;
+    background-color: #ffffff;
+    color: #333;
+    border: 1px solid #ccc;
     cursor: pointer;
 
     &:hover {
-      background-color: #e2e6ea;
-      border-color: #9fa6ae;
+      background-color: #e9f5ff;
+      border-color: #b3d7ff;
       transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.075);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
     }
   }
 
   // Red (Reserved by others)
   &.tramo-reserved {
-    background-color: #dc3545; // Bootstrap's danger color
+    background-color: #dc3545; // Bootstrap's danger
     color: white;
-    border-color: #dc3545;
+    border-color: #c82333;
     cursor: not-allowed;
-    .tramo-status {
-        color: white !important; // Ensure text is readable
+    .tramo-status, .tramo-time { // Ensure text readability
+        color: white !important;
     }
   }
 
   // Green (Selected by current client)
   &.tramo-selected {
-    background-color: #28a745; // Bootstrap's success color
+    background-color: #28a745; // Bootstrap's success
     color: white;
-    border-color: #28a745;
-    font-weight: bold; // Make selected stand out more
-    transform: scale(1.02); // Slightly larger
-    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
-     .tramo-status {
-        color: white !important; // Ensure text is readable
+    border-color: #1e7e34;
+    font-weight: bold;
+    transform: scale(1.03);
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.4);
+     .tramo-status, .tramo-time { // Ensure text readability
+        color: white !important;
     }
   }
 }
 
-// Ensure form controls and other elements have some spacing
 .form-label {
   margin-bottom: 0.25rem;
+  font-size: 0.9rem;
 }
+
 .form-select, .form-control {
   margin-bottom: 1rem;
 }

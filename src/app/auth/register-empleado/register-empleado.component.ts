@@ -1,20 +1,16 @@
 // src/app/auth/register-empleado/register-empleado.component.ts
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { AuthService } from '../../shared/services/auth.service';
+import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
-import { PeluqueriaService } from '../../shared/services/peluqueria.service'; // Para cargar peluquerías
+import { AuthService } from '../../shared/services/auth.service';
+import { PeluqueriaService } from '../../shared/services/peluqueria.service';
 import { Empleado } from '../../shared/models/empleado.model';
 import { Peluqueria } from '../../shared/models/peluqueria.model';
 
 @Component({
   selector: 'app-register-empleado',
-  standalone: true, // Mark as standalone
-  imports: [
-    CommonModule, // For *ngIf, *ngFor
-    ReactiveFormsModule // For formGroup, formControlName
-  ],
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule], // FormsModule for [ngValue]
   templateUrl: './register-empleado.component.html',
   // styleUrls: ['./register-empleado.component.css']
 })
@@ -23,11 +19,7 @@ export class RegisterEmpleadoComponent implements OnInit {
   errorMessage: string | null = null;
   successMessage: string | null = null;
   peluquerias: Peluqueria[] = [];
-
-  rolesEmpleado = ['Peluquero', 'Estilista', 'Barbero', 'Recepcionista']; // Roles específicos para el select de 'rol' (no isAdmin)
-  // El campo 'rol' en Empleado.java era "Mujer, Hombre, Ambos", ajustar si es diferente.
-  // Aquí lo interpreto como el tipo de trabajo.
-  // El campo `isAdmin` es un booleano aparte.
+  rolesEmpleadoDescriptivos = ['Peluquero General', 'Especialista Cortes Mujer', 'Especialista Cortes Hombre', 'Especialista Color', 'Barbero', 'Recepcionista', 'Estilista Unisex'];
 
   constructor(
     private fb: FormBuilder,
@@ -40,9 +32,9 @@ export class RegisterEmpleadoComponent implements OnInit {
       dni: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', Validators.required],
-      rol: ['', Validators.required], // Tipo de trabajo
-      isAdmin: [false, Validators.required], // Booleano para admin
-      peluqueriaId: [null, Validators.required], // ID de la peluquería a la que pertenece
+      rol: ['', Validators.required], // Descriptive role
+      isAdmin: [false, Validators.required],
+      peluqueriaId: [null, Validators.required],
       telefono: [''],
       direccion: ['']
     }, { validators: this.passwordMatchValidator });
@@ -61,8 +53,8 @@ export class RegisterEmpleadoComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.markAllAsTouched();
     if (this.registerForm.invalid) {
-      this.markAllAsTouched();
       return;
     }
     this.errorMessage = null;
@@ -72,18 +64,17 @@ export class RegisterEmpleadoComponent implements OnInit {
 
     const empleadoParaEnviar: Empleado = {
       ...empleadoDataPartial,
-      peluqueria: { id: peluqueriaId } as Peluqueria // Enviar solo el ID de la peluquería dentro de un objeto Peluqueria
+      peluqueria: { id: peluqueriaId } as Peluqueria // Ensure only ID is sent if backend expects that
     };
-
 
     this.authService.registerEmpleado(empleadoParaEnviar).subscribe({
       next: () => {
         this.successMessage = '¡Empleado registrado con éxito!';
-        this.registerForm.reset({ isAdmin: false }); // Resetear isAdmin a false por defecto
+        this.registerForm.reset({ isAdmin: false, peluqueriaId: null, rol: '' });
       },
       error: (err) => {
-        console.error('Registration failed', err);
-        this.errorMessage = err.error?.message || err.error?.error || 'Error en el registro del empleado. Verifica los datos o inténtalo más tarde.';
+        console.error('Employee registration failed', err);
+        this.errorMessage = err.error?.message || err.error?.error || 'Error en el registro del empleado.';
       }
     });
   }
@@ -91,8 +82,9 @@ export class RegisterEmpleadoComponent implements OnInit {
    markAllAsTouched() {
     Object.values(this.registerForm.controls).forEach(control => {
       control.markAsTouched();
+      control.updateValueAndValidity();
     });
-    if (this.registerForm.errors?.['mismatch']) {
+    if (this.registerForm.errors?.['mismatch'] && this.registerForm.get('confirmPassword')) {
         this.registerForm.get('confirmPassword')?.setErrors({'mismatch': true});
     }
   }

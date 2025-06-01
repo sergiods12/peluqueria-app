@@ -1,13 +1,20 @@
 // src/app/auth/login/login.component.ts
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AuthService, AuthUser } from '../../shared/services/auth.service'; // Importar AuthUser
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { AuthService, AuthUser } from '../../shared/services/auth.service';
 
 @Component({
   selector: 'app-login',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterModule
+  ],
   templateUrl: './login.component.html',
-  // styleUrls: ['./login.component.css'] // Descomenta si tienes estilos específicos
+  // styleUrls: ['./login.component.css']
 })
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
@@ -25,7 +32,6 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Si ya está logueado, redirigir
     if (this.authService.isLoggedIn()) {
       const user = this.authService.getCurrentUser();
       this.redirectToDashboard(user);
@@ -33,38 +39,45 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.markAllAsTouched();
     if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
       return;
     }
     this.errorMessage = null;
     const { email, password } = this.loginForm.value;
 
     this.authService.login(email, password).subscribe({
-      // El AuthService ahora se encarga de fetchUserDetailsAndNavigate
-      // por lo que el next aquí puede quedar vacío o solo loguear el éxito de la petición HTTP
-      next: () => {
-        console.log('Login HTTP request successful. User details fetch and navigation handled by AuthService.');
-        // La navegación se hará desde AuthService después de obtener los detalles del usuario
-      },
+      // Navigation is handled by AuthService after fetching user details
       error: (err) => {
         console.error('Login failed in component', err);
-        if (err.status === 401 || err.status === 0) { // 0 a veces para errores de red/CORS
+        if (err.status === 401 || err.status === 0) {
             this.errorMessage = 'Email o contraseña incorrectos, o error de conexión.';
-        } else {
-            this.errorMessage = `Error al intentar iniciar sesión (${err.status}). Inténtalo más tarde.`;
+        } else if (err.error && typeof err.error === 'string' && err.error.includes('Bad credentials')) {
+             this.errorMessage = 'Email o contraseña incorrectos.';
+        } else if (err.error && err.error.message) {
+            this.errorMessage = err.error.message;
+        } else if (err.message) {
+            this.errorMessage = err.message;
+        }
+         else {
+            this.errorMessage = `Error al intentar iniciar sesión (${err.statusText || 'desconocido'}). Inténtalo más tarde.`;
         }
       }
     });
   }
 
+  markAllAsTouched() {
+    Object.values(this.loginForm.controls).forEach(control => {
+      control.markAsTouched();
+      control.updateValueAndValidity();
+    });
+  }
+
   private redirectToDashboard(user: AuthUser | null): void {
     if (user) {
-      if (user.rol === 'CLIENTE') {
-        this.router.navigate(['/cliente']);
-      } else if (user.rol === 'EMPLEADO' || user.rol === 'ADMIN') {
-        this.router.navigate(['/empleado']);
-      }
+      const urlToNavigate = this.authService.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
+      this.authService.redirectUrl = null;
+      this.router.navigate([urlToNavigate]);
     }
   }
 }

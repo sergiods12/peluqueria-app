@@ -1,13 +1,13 @@
+// src/app/cliente/reservar-cita/reservar-cita.component.ts
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms'; // Ensure ReactiveFormsModule is here if standalone
-import { CommonModule } from '@angular/common'; // Ensure CommonModule for pipes and directives if standalone
-
-// ... other necessary imports (Peluqueria, Empleado, Servicio, Tramo, services, etc.)
+import { CommonModule } from '@angular/common'; // For *ngIf, *ngFor, date pipe
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms'; // Essential for formGroup
+// ... other imports from your previous full component code ...
 import { Peluqueria } from '../../shared/models/peluqueria.model';
 import { Empleado } from '../../shared/models/empleado.model';
 import { Servicio } from '../../shared/models/servicio.model';
+import { Tramo } from '../../shared/models/tramo.model';
 import { ReservaRequestDTO } from '../../shared/models/reserva-request-dto.model';
-import { Tramo } from '../../shared/models/tramo.model'; // Ensure Tramo is imported
 import { PeluqueriaService } from '../../shared/services/peluqueria.service';
 import { EmpleadoService } from '../../shared/services/empleado.service';
 import { ServicioAppService } from '../../shared/services/servicio-app.service';
@@ -15,20 +15,17 @@ import { TramoService } from '../../shared/services/tramo.service';
 import { AuthService, AuthUser } from '../../shared/services/auth.service';
 import { forkJoin } from 'rxjs';
 
-
-
-interface TramoDisplay extends Tramo { // Ensure Tramo is defined or imported
+interface TramoDisplay extends Tramo {
   estado: 'disponible' | 'reservadoOtro' | 'seleccionado' | 'noSeleccionable';
   esInicioPosible?: boolean;
 }
-
 
 @Component({
   selector: 'app-reservar-cita',
   standalone: true,
   imports: [
-    CommonModule,       // For *ngIf, *ngFor, async pipe, date pipe
-    ReactiveFormsModule // For formGroup, formControlName
+    CommonModule,
+    ReactiveFormsModule // Ensure this is imported
   ],
   templateUrl: './reservar-cita.component.html',
   styleUrls: ['./reservar-cita.component.scss']
@@ -38,19 +35,15 @@ export class ReservarCitaComponent implements OnInit {
   peluquerias: Peluqueria[] = [];
   empleadosPeluqueria: Empleado[] = [];
   servicios: Servicio[] = [];
-
   fechaSeleccionada: string = '';
   tramosDesdeBackend: Tramo[] = [];
   tramosParaMostrar: TramoDisplay[] = [];
   todosLosPosiblesIntervalosDelDia: { horaInicio: string, horaFin: string }[] = [];
-
   minDate: string;
   currentUser: AuthUser | null = null;
-
   mensajeError: string | null = null;
   mensajeExito: string | null = null;
-  isLoadingTramos: boolean = false; // <<< DECLARE AND INITIALIZE HERE
-
+  isLoadingTramos: boolean = false;
   private selectedTramosIds: number[] = [];
 
   constructor(
@@ -61,22 +54,57 @@ export class ReservarCitaComponent implements OnInit {
     private tramoService: TramoService,
     private authService: AuthService
   ) {
+    const today = new Date();
+    this.minDate = today.toISOString().split('T')[0];
+
     this.reservaForm = this.fb.group({
       peluqueria: [null, Validators.required],
-      empleado: [{ value: null, disabled: true }, Validators.required],
-      servicio: [{ value: null, disabled: true }, Validators.required],
+      empleado: [{ value: null, disabled: true }, Validators.required], // Initial disabled state managed here
+      servicio: [{ value: null, disabled: true }, Validators.required], // Initial disabled state managed here
+      fechaCita: [this.minDate, Validators.required]
     });
-
-    const today = new Date();
-    this.minDate = today.toISOString().split('T')[0]; // Format YYYY-MM-DD
+    this.fechaSeleccionada = this.minDate;
     this.generarTodosLosPosiblesIntervalosDelDia();
   }
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    this.loadInitialData();
 
-    // Fetch initial data like peluquerias and servicios
-    // Set isLoadingTramos = true before the call and false in subscribe/finalize
+    this.reservaForm.get('peluqueria')?.valueChanges.subscribe(peluqueriaId => {
+      this.onPeluqueriaChange(peluqueriaId); // This will enable/disable 'empleado'
+      if (peluqueriaId) {
+        this.reservaForm.get('servicio')?.enable(); // Enable 'servicio'
+      } else {
+        this.reservaForm.get('servicio')?.reset({ value: null, disabled: true });
+        this.reservaForm.get('empleado')?.reset({ value: null, disabled: true });
+      }
+      this.attemptLoadTramos();
+    });
+
+    this.reservaForm.get('empleado')?.valueChanges.subscribe(() => {
+      this.attemptLoadTramos();
+    });
+
+    this.reservaForm.get('servicio')?.valueChanges.subscribe(() => {
+      this.attemptLoadTramos();
+    });
+
+    this.reservaForm.get('fechaCita')?.valueChanges.subscribe(dateValue => {
+      if (dateValue) {
+        this.fechaSeleccionada = dateValue;
+        this.attemptLoadTramos();
+      } else {
+        this.resetearVistaTramos();
+      }
+    });
+     if (this.reservaForm.get('fechaCita')?.value) { // Initial load based on default date
+        this.fechaSeleccionada = this.reservaForm.get('fechaCita')?.value;
+        this.attemptLoadTramos();
+    }
+  }
+
+  loadInitialData(): void {
     this.isLoadingTramos = true;
     forkJoin({
       peluquerias: this.peluqueriaService.getAllPeluquerias(),
@@ -88,37 +116,9 @@ export class ReservarCitaComponent implements OnInit {
         this.isLoadingTramos = false;
       },
       error: (err) => {
-        this.mensajeError = 'Error al cargar datos iniciales: ' + (err.error?.message || err.message);
+        this.mensajeError = 'Error al cargar datos iniciales.';
         this.isLoadingTramos = false;
         console.error(err);
-      }
-    });
-
-
-    this.reservaForm.get('peluqueria')?.valueChanges.subscribe(peluqueriaId => {
-      this.onPeluqueriaChange(peluqueriaId);
-      if (peluqueriaId) {
-        this.reservaForm.get('servicio')?.enable();
-      } else {
-        this.reservaForm.get('servicio')?.disable();
-        this.reservaForm.get('servicio')?.reset();
-      }
-    });
-
-    this.reservaForm.get('empleado')?.valueChanges.subscribe(empleadoId => {
-      if (this.fechaSeleccionada && empleadoId && this.reservaForm.get('servicio')?.value) {
-        this.cargarTramosDelEmpleado();
-      } else {
-        this.resetearVistaTramos();
-      }
-    });
-
-    this.reservaForm.get('servicio')?.valueChanges.subscribe(servicioId => {
-      // Only load tramos if employee and date are also selected
-      if (this.fechaSeleccionada && this.reservaForm.get('empleado')?.value && servicioId) {
-        this.cargarTramosDelEmpleado(); // This will call procesarTramosParaMostrar
-      } else {
-         this.procesarTramosParaMostrar(); // Reprocess with new service (might clear tramos if other fields missing)
       }
     });
   }
@@ -130,8 +130,7 @@ export class ReservarCitaComponent implements OnInit {
             horaInicio: `${String(h).padStart(2, '0')}:00`,
             horaFin: `${String(h).padStart(2, '0')}:30`
         });
-        // Ensure the last slot is 21:30 - 22:00
-        if (h < 21) { // Only add .30 if it's not the last hour block before 22:00
+        if (h < 21) {
              this.todosLosPosiblesIntervalosDelDia.push({
                 horaInicio: `${String(h).padStart(2, '0')}:30`,
                 horaFin: `${String(h + 1).padStart(2, '0')}:00`
@@ -141,219 +140,172 @@ export class ReservarCitaComponent implements OnInit {
   }
 
   onPeluqueriaChange(peluqueriaId: string | number | null): void {
-    this.reservaForm.get('empleado')?.reset({ value: null, disabled: true });
     this.empleadosPeluqueria = [];
-    this.resetearVistaTramos();
+    // No need to reset tramos here, attemptLoadTramos will handle it based on new state
 
-    if (!peluqueriaId) return;
+    if (!peluqueriaId) {
+      this.reservaForm.get('empleado')?.disable(); // Explicitly disable if no peluqueria
+      return;
+    }
 
     const peluqueriaSeleccionada = this.peluquerias.find(p => p.id === +peluqueriaId);
     if (peluqueriaSeleccionada?.empleados && peluqueriaSeleccionada.empleados.length > 0) {
       this.empleadosPeluqueria = peluqueriaSeleccionada.empleados;
       this.reservaForm.get('empleado')?.enable();
     } else {
-      console.warn('Peluquería seleccionada no tiene empleados en la data o se necesita cargar por separado.');
+      this.reservaForm.get('empleado')?.disable();
+      console.warn('Peluquería seleccionada no tiene empleados o necesita cargarlos.');
     }
   }
 
-  onFechaChange(eventOrDate: Event | string): void {
-    if (typeof eventOrDate === 'string') {
-      this.fechaSeleccionada = eventOrDate;
-    } else {
-      const inputElement = eventOrDate.target as HTMLInputElement;
-      this.fechaSeleccionada = inputElement.value;
-    }
-    // Only load tramos if other required fields are also present
-    if (this.reservaForm.get('empleado')?.value && this.reservaForm.get('servicio')?.value) {
-        this.cargarTramosDelEmpleado();
-    }
-  }
-
-  cargarTramosDelEmpleado(): void {
+  attemptLoadTramos(): void {
     const empleadoId = this.reservaForm.get('empleado')?.value;
-    // this.resetearVistaTramos(); // reset is good, but procesar will update based on tramosDesdeBackend
-    if (this.fechaSeleccionada && empleadoId && this.reservaForm.get('servicio')?.value) {
-      this.isLoadingTramos = true;
-      this.mensajeError = null;
-      this.tramoService.getTramosDisponibles(this.fechaSeleccionada, empleadoId)
-        .subscribe({
-          next: tramos => {
-            this.tramosDesdeBackend = tramos;
-            this.procesarTramosParaMostrar();
-            this.isLoadingTramos = false;
-          },
-          error: err => {
-            console.error("Error al cargar tramos:", err);
-            this.mensajeError = "No se pudieron cargar los horarios para esta fecha.";
-            this.tramosDesdeBackend = [];
-            this.procesarTramosParaMostrar();
-            this.isLoadingTramos = false;
-          }
-        });
+    const servicioId = this.reservaForm.get('servicio')?.value;
+    const fecha = this.reservaForm.get('fechaCita')?.value;
+
+    if (empleadoId && servicioId && fecha) {
+      this.cargarTramosDelEmpleado(+empleadoId, fecha);
     } else {
-        this.tramosDesdeBackend = []; // Clear backend tramos if pre-requisites not met
-        this.procesarTramosParaMostrar(); // Update display to show no tramos
+      this.resetearVistaTramos();
     }
+  }
+
+  cargarTramosDelEmpleado(empleadoId: number, fecha: string): void {
+    this.isLoadingTramos = true;
+    this.mensajeError = null;
+    this.selectedTramosIds = [];
+
+    this.tramoService.getTramosDisponibles(fecha, empleadoId)
+      .subscribe({
+        next: tramos => {
+          this.tramosDesdeBackend = tramos;
+          this.procesarTramosParaMostrar();
+          this.isLoadingTramos = false;
+        },
+        error: err => {
+          console.error("Error al cargar tramos:", err);
+          this.mensajeError = "Error al cargar los horarios para el empleado.";
+          this.tramosDesdeBackend = [];
+          this.procesarTramosParaMostrar();
+          this.isLoadingTramos = false;
+        }
+      });
   }
 
   procesarTramosParaMostrar(): void {
-    // If service is not selected, don't process or show tramos for selection
     const servicioSeleccionado: Servicio | undefined = this.getServicioSeleccionado();
-    if (!this.reservaForm.get('peluqueria')?.value || !this.reservaForm.get('empleado')?.value || !this.fechaSeleccionada || !servicioSeleccionado) {
+    const fecha = this.reservaForm.get('fechaCita')?.value;
+
+    if (!this.reservaForm.get('empleado')?.value || !fecha || !servicioSeleccionado) {
       this.tramosParaMostrar = [];
       this.selectedTramosIds = [];
       return;
     }
-
     const numTramosNecesarios = servicioSeleccionado.numTramos || 1;
 
-    this.tramosParaMostrar = this.todosLosPosiblesIntervalosDelDia.map(intervalo => {
-        const tramoBackend = this.tramosDesdeBackend.find(
-            tb => tb.horaInicio.startsWith(intervalo.horaInicio) && tb.fecha === this.fechaSeleccionada
-        );
+    this.tramosParaMostrar = this.todosLosPosiblesIntervalosDelDia.map(intervaloBase => {
+      const tramoBackend = this.tramosDesdeBackend.find(
+        tb => tb.horaInicio.startsWith(intervaloBase.horaInicio) && tb.fecha === fecha
+      );
+      let calculatedEstado: TramoDisplay['estado'] = 'noSeleccionable';
+      let esInicioPosible = false;
+      let displayTramoData: Partial<Tramo> & { horaInicio: string, horaFin: string, fecha: string, disponible: boolean } = {
+        id: undefined, fecha: fecha, horaInicio: intervaloBase.horaInicio, horaFin: intervaloBase.horaFin, disponible: false,
+      };
 
-        let calculatedEstado: TramoDisplay['estado'] = 'noSeleccionable';
-        let esInicioPosible = false;
-        let finalTramoData: Partial<Tramo> = {
-            fecha: this.fechaSeleccionada,
-            horaInicio: intervalo.horaInicio,
-            horaFin: intervalo.horaFin,
-            disponible: false,
-            hueco: 'base-interval',
-        };
+      if (tramoBackend) {
+        displayTramoData = { ...displayTramoData, ...tramoBackend };
+        if (tramoBackend.disponible) {
+          calculatedEstado = 'disponible';
+          let countDisponiblesConsecutivos = 0;
+          const indiceIntervaloActual = this.todosLosPosiblesIntervalosDelDia.findIndex(p => p.horaInicio === intervaloBase.horaInicio);
+          for (let i = 0; i < numTramosNecesarios; i++) {
+            if (indiceIntervaloActual + i < this.todosLosPosiblesIntervalosDelDia.length) {
+              const siguienteIntervalo = this.todosLosPosiblesIntervalosDelDia[indiceIntervaloActual + i];
+              const tramoCorresp = this.tramosDesdeBackend.find(
+                tb => tb.horaInicio.startsWith(siguienteIntervalo.horaInicio) && tb.fecha === fecha && tb.disponible
+              );
+              if (tramoCorresp) { countDisponiblesConsecutivos++; } else { break; }
+            } else { break; }
+          }
+          if (countDisponiblesConsecutivos === numTramosNecesarios) esInicioPosible = true;
+        } else { calculatedEstado = 'reservadoOtro'; }
+      }
 
-        if (tramoBackend) {
-            finalTramoData = { ...tramoBackend }; // Use backend data
-            if (tramoBackend.disponible) {
-                calculatedEstado = 'disponible';
-                let countDisponiblesConsecutivos = 0;
-                const indiceIntervaloActual = this.todosLosPosiblesIntervalosDelDia.findIndex(p => p.horaInicio === intervalo.horaInicio);
+      if (displayTramoData.id && this.selectedTramosIds.includes(displayTramoData.id)) {
+        calculatedEstado = 'seleccionado';
+      }
 
-                for (let i = 0; i < numTramosNecesarios; i++) {
-                    if (indiceIntervaloActual + i < this.todosLosPosiblesIntervalosDelDia.length) {
-                        const siguienteIntervaloBase = this.todosLosPosiblesIntervalosDelDia[indiceIntervaloActual + i];
-                        const tramoCorrespondiente = this.tramosDesdeBackend.find(
-                            tb => tb.horaInicio.startsWith(siguienteIntervaloBase.horaInicio) && tb.fecha === this.fechaSeleccionada && tb.disponible
-                        );
-                        if (tramoCorrespondiente) {
-                            countDisponiblesConsecutivos++;
-                        } else {
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-                if (countDisponiblesConsecutivos === numTramosNecesarios) {
-                    esInicioPosible = true;
-                }
-            } else {
-                calculatedEstado = 'reservadoOtro';
-            }
-        }
-
-        // Override estado if selected
-        if (finalTramoData.id && this.selectedTramosIds.includes(finalTramoData.id)) {
-            calculatedEstado = 'seleccionado';
-        }
-
-        return {
-            ...finalTramoData, // Spread properties from backend tramo or base interval
-            estado: calculatedEstado,
-            esInicioPosible
-        } as TramoDisplay;
+      return { ...(displayTramoData as Tramo), estado: calculatedEstado, esInicioPosible } as TramoDisplay;
     });
   }
 
   seleccionarTramo(tramoClickeado: TramoDisplay): void {
-    // Basic validation, procesarTramosParaMostrar should ensure esInicioPosible is correct
-    if (!tramoClickeado.esInicioPosible || !tramoClickeado.id ) {
-        this.mensajeError = "Este tramo no se puede seleccionar o no es un inicio válido.";
-        return;
+    if (!tramoClickeado.esInicioPosible || !tramoClickeado.id) {
+      this.mensajeError = "Este tramo no puede iniciar una reserva."; return;
     }
-    this.mensajeError = null; // Clear previous error
-
+    this.mensajeError = null;
     const servicioSeleccionado = this.getServicioSeleccionado();
     if (!servicioSeleccionado || !servicioSeleccionado.id) return;
 
     const numTramosNecesarios = servicioSeleccionado.numTramos;
-    const nuevosTramosSeleccionadosIds: number[] = [];
-    const indiceClickeado = this.todosLosPosiblesIntervalosDelDia.findIndex(p => p.horaInicio === tramoClickeado.horaInicio);
+    const nuevosTramosIds: number[] = [];
+    const fechaActual = this.reservaForm.get('fechaCita')?.value;
+    const indiceClickeadoGlobal = this.todosLosPosiblesIntervalosDelDia.findIndex(p => p.horaInicio === tramoClickeado.horaInicio);
 
     for (let i = 0; i < numTramosNecesarios; i++) {
-        const targetIndexGlobal = indiceClickeado + i;
-        if (targetIndexGlobal < this.todosLosPosiblesIntervalosDelDia.length) {
-            const intervaloBase = this.todosLosPosiblesIntervalosDelDia[targetIndexGlobal];
-            const tramoCorrespondiente = this.tramosDesdeBackend.find(
-                tb => tb.horaInicio.startsWith(intervaloBase.horaInicio) && tb.fecha === this.fechaSeleccionada && tb.disponible
-            );
-
-            if (tramoCorrespondiente && tramoCorrespondiente.id) {
-                nuevosTramosSeleccionadosIds.push(tramoCorrespondiente.id);
-            } else {
-                this.mensajeError = `El tramo de las ${intervaloBase.horaInicio} es necesario y no está disponible.`;
-                this.selectedTramosIds = []; // Clear selection
-                this.procesarTramosParaMostrar(); // Refresh display to show the error state
-                return;
-            }
+      const targetIndexGlobal = indiceClickeadoGlobal + i;
+      if (targetIndexGlobal < this.todosLosPosiblesIntervalosDelDia.length) {
+        const intervaloBase = this.todosLosPosiblesIntervalosDelDia[targetIndexGlobal];
+        const tramoCorresp = this.tramosDesdeBackend.find(
+          tb => tb.horaInicio.startsWith(intervaloBase.horaInicio) && tb.fecha === fechaActual && tb.disponible
+        );
+        if (tramoCorresp && tramoCorresp.id) {
+          nuevosTramosIds.push(tramoCorresp.id);
         } else {
-            this.mensajeError = "No hay suficientes tramos en el día para completar el servicio.";
-            this.selectedTramosIds = []; // Clear selection
-            this.procesarTramosParaMostrar(); // Refresh display
-            return;
+          this.mensajeError = `El tramo de las ${intervaloBase.horaInicio} (o uno subsiguiente) no está disponible.`;
+          this.selectedTramosIds = []; this.procesarTramosParaMostrar(); return;
         }
+      } else {
+        this.mensajeError = "No hay suficientes tramos en el día para este servicio.";
+        this.selectedTramosIds = []; this.procesarTramosParaMostrar(); return;
+      }
     }
-    this.selectedTramosIds = nuevosTramosSeleccionadosIds;
-    this.procesarTramosParaMostrar(); // Re-run to update states based on new selection
+    this.selectedTramosIds = nuevosTramosIds;
+    this.procesarTramosParaMostrar();
   }
 
   resetearVistaTramos(): void {
     this.tramosDesdeBackend = [];
-    // this.tramosParaMostrar = []; // Will be repopulated by procesarTramosParaMostrar
     this.selectedTramosIds = [];
-    this.mensajeError = null;
-    this.mensajeExito = null;
-    this.procesarTramosParaMostrar(); // Call to clear display if needed
+    this.procesarTramosParaMostrar();
   }
 
   confirmarReserva(): void {
-    this.mensajeError = null;
-    this.mensajeExito = null;
-
+    this.mensajeError = null; this.mensajeExito = null;
     if (this.selectedTramosIds.length === 0) {
-      this.mensajeError = "Por favor, selecciona los tramos para la reserva.";
-      return;
+      this.mensajeError = "Por favor, selecciona los tramos."; return;
     }
     if (!this.currentUser || this.currentUser.rol !== 'CLIENTE' || !this.currentUser.id) {
-      this.mensajeError = "Debes estar logueado como cliente para reservar.";
-      return;
+      this.mensajeError = "Debe estar logueado como cliente."; return;
     }
     const servicioSeleccionado = this.getServicioSeleccionado();
     if (!servicioSeleccionado || !servicioSeleccionado.id) {
-        this.mensajeError = "Por favor, selecciona un servicio válido.";
-        return;
+      this.mensajeError = "Seleccione un servicio."; return;
     }
-
-    const primerTramoIdValido = this.selectedTramosIds[0];
-
+    const primerTramoId = this.selectedTramosIds[0];
     const reservaRequest: ReservaRequestDTO = {
-      primerTramoId: primerTramoIdValido,
-      clienteId: this.currentUser.id,
-      servicioId: servicioSeleccionado.id
+      primerTramoId: primerTramoId, clienteId: this.currentUser.id, servicioId: servicioSeleccionado.id
     };
-
     this.tramoService.reservarMultiplesTramos(reservaRequest).subscribe({
-      next: (tramosReservados) => {
-        this.mensajeExito = `Reserva confirmada para "${servicioSeleccionado.nombre}".`;
-        this.selectedTramosIds = []; // Clear selection
-        this.cargarTramosDelEmpleado(); // Recargar tramos
+      next: () => {
+        this.mensajeExito = `Reserva confirmada para ${servicioSeleccionado.nombre}.`;
+        this.selectedTramosIds = [];
+        this.attemptLoadTramos();
       },
       error: (err) => {
-        console.error("Error al confirmar reserva", err);
-        this.mensajeError = `Error al confirmar la reserva: ${err.error?.message || err.message || 'Error desconocido.'}`;
-        // Optionally, keep selection or clear it based on desired UX
-        // this.selectedTramosIds = [];
-        this.procesarTramosParaMostrar(); // Refresh display based on current selection state
+        this.mensajeError = `Error: ${err.error?.message || err.message || 'No se pudo confirmar.'}`;
+        this.procesarTramosParaMostrar();
       }
     });
   }
@@ -363,26 +315,11 @@ export class ReservarCitaComponent implements OnInit {
     return this.servicios.find(s => s.id === +servicioId);
   }
 
-  getTramosSeleccionadosIDs(): number[] { // Helper for procesarTramosParaMostrar
-    return this.selectedTramosIds;
-  }
-
   getTramosSeleccionados(): TramoDisplay[] {
     return this.tramosParaMostrar.filter(t => t.id && this.selectedTramosIds.includes(t.id));
   }
 
   hayTramosSeleccionables(): boolean {
-    // This function indicates if there's ANY valid starting slot for the current service
-    return this.tramosParaMostrar.some(t => t.esInicioPosible);
+    return this.tramosParaMostrar.some(t => t.esInicioPosible && t.estado === 'disponible');
   }
-
-  // No longer needed if `tramo.estado` is the source of truth after procesarTramosParaMostrar
-  // isTramoSeleccionado(tramo: TramoDisplay): boolean {
-  //   return !!tramo.id && this.selectedTramosIds.includes(tramo.id);
-  // }
-
-  // No longer needed if click handler checks tramo.esInicioPosible directly
-  // puedeSeleccionarTramo(tramo: TramoDisplay): boolean {
-  //   return tramo.estado === 'disponible' && !!tramo.esInicioPosible;
-  // }
 }

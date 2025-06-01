@@ -1,15 +1,16 @@
- import { Injectable } from '@angular/core';
+// src/app/shared/services/tramo.service.ts
+import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Tramo } from '../models/tramo.model';
-import { ReservaRequestDTO } from '../models/reservar-cita.component'; // Ensure this model exists
-import { environment } from '../../../environments/environment';
+import { ReservaRequestDTO } from '../models/reserva-request-dto.model';
+import { environment } from '../../../environments/environment'; // This path MUST match your actual structure
 
 @Injectable({
   providedIn: 'root'
 })
 export class TramoService {
-  private apiUrl = `<span class="math-inline">\{environment\.apiUrl\}</span>{environment.apiPrefix}/tramos`;
+  private apiUrl = `${environment.apiUrl}${environment.apiPrefix}/tramos`;
 
   constructor(private http: HttpClient) { }
 
@@ -17,36 +18,33 @@ export class TramoService {
     const params = new HttpParams()
       .set('fecha', fecha)
       .set('empleadoId', empleadoId.toString());
-    return this.http.get<Tramo[]>(`${this.apiUrl}/disponibles`, { params });
+    return this.http.get<Tramo[]>(`${this.apiUrl}/disponibles`, { params, withCredentials: true });
   }
 
-  // For CancelarReservaClienteComponent - ideally a dedicated backend endpoint
-  // GET /api/tramos/cliente/{clienteId} or GET /api/clientes/me/reservas
-  // This is a placeholder if you keep client-side filtering:
+  // Used by CancelarReservaClienteComponent
+  // Ensure your backend has an endpoint like /api/clientes/{id}/reservas or /api/tramos?clienteId={id}
+  // For this example, assuming a /reservas endpoint under the cliente's specific path
   getTramosByCliente(clienteId: number): Observable<Tramo[]> {
-    // This would be better as a dedicated backend endpoint.
-    // As a fallback, if your backend allows fetching all tramos (not recommended for performance):
-    // return this.http.get<Tramo[]>(`<span class="math-inline">\{this\.apiUrl\}/cliente/</span>{clienteId}`); // if such an endpoint exists
-    // For now, assuming the component will filter or a more specific endpoint needs to be created in backend.
-    // The existing `getTramosParaClienteSimulado` in `cancelar-reserva-cliente.component.ts` would use this.
-    // Let's assume a new backend endpoint like /api/clientes/{clienteId}/reservas
-    return this.http.get<Tramo[]>(`<span class="math-inline">\{environment\.apiUrl\}</span>{environment.apiPrefix}/clientes/${clienteId}/reservas`);
+    return this.http.get<Tramo[]>(`${environment.apiUrl}${environment.apiPrefix}/clientes/${clienteId}/reservas`, { withCredentials: true });
   }
-
 
   reservarMultiplesTramos(reservaRequest: ReservaRequestDTO): Observable<Tramo[]> {
-    return this.http.post<Tramo[]>(`${this.apiUrl}/reservar`, reservaRequest);
+    return this.http.post<Tramo[]>(`${this.apiUrl}/reservar`, reservaRequest, { withCredentials: true });
   }
 
   cancelarReserva(tramoId: number): Observable<Tramo> {
-    return this.http.put<Tramo>(`<span class="math-inline">\{this\.apiUrl\}/</span>{tramoId}/cancelar`, {});
+    return this.http.put<Tramo>(`${this.apiUrl}/${tramoId}/cancelar`, {}, { withCredentials: true });
   }
 
   saveTramo(tramo: Tramo): Observable<Tramo> {
-    return this.http.post<Tramo>(this.apiUrl, tramo);
+    return this.http.post<Tramo>(this.apiUrl, tramo, { withCredentials: true });
   }
 
   updateTramo(tramoId: number, tramo: Tramo): Observable<Tramo> {
-    return this.http.put<Tramo>(`<span class="math-inline">\{this\.apiUrl\}/</span>{tramoId}`, tramo);
+    return this.http.put<Tramo>(`${this.apiUrl}/${tramoId}`, tramo, { withCredentials: true });
+  }
+
+  findById(id: number): Observable<Tramo> { // Added for completeness if needed
+    return this.http.get<Tramo>(`${this.apiUrl}/${id}`, { withCredentials: true });
   }
 }

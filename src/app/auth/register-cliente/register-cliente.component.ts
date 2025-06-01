@@ -1,12 +1,15 @@
 // src/app/auth/register-cliente/register-cliente.component.ts
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
-import { Router } from '@angular/router';
+import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { AuthService } from '../../shared/services/auth.service';
 import { Cliente } from '../../shared/models/cliente.model';
 
 @Component({
   selector: 'app-register-cliente',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './register-cliente.component.html',
   // styleUrls: ['./register-cliente.component.css']
 })
@@ -38,8 +41,8 @@ export class RegisterClienteComponent {
   }
 
   onSubmit(): void {
+    this.markAllAsTouched();
     if (this.registerForm.invalid) {
-      this.markAllAsTouched();
       return;
     }
     this.errorMessage = null;
@@ -51,11 +54,10 @@ export class RegisterClienteComponent {
       next: () => {
         this.successMessage = '¡Cliente registrado con éxito! Ahora puedes iniciar sesión.';
         this.registerForm.reset();
-        // Opcional: this.router.navigate(['/auth/login']);
       },
       error: (err) => {
         console.error('Registration failed', err);
-        this.errorMessage = err.error?.message || err.error?.error || 'Error en el registro. Verifica los datos o inténtalo más tarde.';
+        this.errorMessage = err.error?.message || err.error?.error || 'Error en el registro. Verifica los datos.';
       }
     });
   }
@@ -63,8 +65,9 @@ export class RegisterClienteComponent {
   markAllAsTouched() {
     Object.values(this.registerForm.controls).forEach(control => {
       control.markAsTouched();
+      control.updateValueAndValidity();
     });
-    if (this.registerForm.errors?.['mismatch']) {
+    if (this.registerForm.errors?.['mismatch'] && this.registerForm.get('confirmPassword')) {
         this.registerForm.get('confirmPassword')?.setErrors({'mismatch': true});
     }
   }

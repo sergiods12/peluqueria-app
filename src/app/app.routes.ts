@@ -1,21 +1,15 @@
-// src/app/app.routes.ts
 import { Routes } from '@angular/router';
-// ... import all your component classes that are used in routes ...
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterClienteComponent } from './auth/register-cliente/register-cliente.component';
-// ... (other component imports as listed in your previous error log for routes)
+import { RegisterEmpleadoComponent } from './auth/register-empleado/register-empleado.component';
 import { ClienteDashboardComponent } from './cliente/cliente-dashboard/cliente-dashboard.component';
 import { EmpleadoDashboardComponent } from './empleado/empleado-dashboard/empleado-dashboard.component';
+import { authGuard } from './shared/guards/auth.guard';
+import { roleGuard } from './shared/guards/role.guard';
 import { ReservarCitaComponent } from './cliente/reservar-cita/reservar-cita.component';
 import { CancelarReservaClienteComponent } from './cliente/cancelar-reserva-cliente/cancelar-reserva-cliente.component';
 import { GestionCalendarioComponent } from './empleado/gestion-calendario/gestion-calendario.component';
 import { CrearPeluqueriaComponent } from './empleado/crear-peluqueria/crear-peluqueria.component';
-import { RegisterEmpleadoComponent } from './auth/register-empleado/register-empleado.component';
-import { authGuard } from './shared/guards/auth.guard';
-import { roleGuard } from './shared/guards/role.guard';
-
-
-// REMOVE ANY LINE LIKE: import { routes } from './app.routes'; from THIS FILE.
 
 export const routes: Routes = [
   { path: 'auth/login', component: LoginComponent },

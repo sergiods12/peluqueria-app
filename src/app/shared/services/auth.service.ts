@@ -1,17 +1,17 @@
+// src/app/shared/services/auth.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, catchError, EMPTY } from 'rxjs';
+import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, catchError, EMPTY, map } from 'rxjs';
 import { Cliente } from '../models/cliente.model';
 import { Empleado } from '../models/empleado.model';
-import { environment } from '../../../environments/environment'; // This path should now be correct
+import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 
-export interface AuthUser { // Interfaz unificada para el usuario en el frontend
+export interface AuthUser {
   id: number;
   nombre: string;
   email: string;
   rol: 'CLIENTE' | 'EMPLEADO' | 'ADMIN';
-  isAdmin?: boolean; // Específico para empleados
 }
 
 @Injectable({
@@ -23,76 +23,73 @@ export class AuthService {
 
   private currentUserSubject = new BehaviorSubject<AuthUser | null>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();
+  public redirectUrl: string | null = null; // <<< ADD THIS LINE if it's missing
 
   constructor(private http: HttpClient, private router: Router) { }
 
   private getUserFromStorage(): AuthUser | null {
-    const user = localStorage.getItem('currentUser');
-    return user ? JSON.parse(user) : null;
+    if (typeof localStorage !== 'undefined') {
+      const user = localStorage.getItem('currentUser');
+      return user ? JSON.parse(user) : null;
+    }
+    return null;
   }
 
   private setUserInStorage(user: AuthUser | null) {
-    if (user) {
-      localStorage.setItem('currentUser', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('currentUser');
+    if (typeof localStorage !== 'undefined') {
+      if (user) {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('currentUser');
+      }
     }
     this.currentUserSubject.next(user);
   }
 
-  login(email: string, password: string): Observable<any> {
+  login(email: string, password: string): Observable<void> {
     const headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded');
     const body = new HttpParams().set('username', email).set('password', password);
 
-    return this.http.post(`${this.backendUrl}/login`, body.toString(), { // /login está en la raíz
+    return this.http.post(`${this.backendUrl}/login`, body.toString(), {
       headers: headers,
       observe: 'response',
       withCredentials: true
     }).pipe(
-      tap(response => {
+      map(response => {
         if (response.ok) {
-          // Después de un login exitoso con formLogin, la cookie de sesión se establece.
-          // Ahora, necesitamos obtener los detalles del usuario autenticado.
           this.fetchUserDetailsAndNavigate();
+        } else {
+          throw new Error(`Login failed with status: ${response.status}`);
         }
       }),
       catchError(err => {
-        console.error('Login HTTP request failed', err);
-        this.setUserInStorage(null); // Asegurar que no quede usuario en storage si falla
-        throw err; // Relanzar el error para que el componente lo maneje
+        console.error('Login HTTP request failed in AuthService', err);
+        this.setUserInStorage(null);
+        throw err;
       })
     );
   }
 
-  // Este método se llama DESPUÉS de que el login HTTP (POST a /login) sea exitoso
-  // y la cookie de sesión JSESSIONID esté (presumiblemente) establecida.
   fetchUserDetailsAndNavigate() {
-    // Debes tener un endpoint en tu backend, por ejemplo, GET /api/auth/me
-    // que devuelva los detalles del usuario actualmente autenticado (basado en su sesión).
-    // Este endpoint debe estar protegido y solo accesible si el usuario está autenticado.
     this.http.get<AuthUser>(`${this.backendUrl}${this.apiPrefix}/auth/me`, { withCredentials: true })
       .subscribe({
         next: (user) => {
           this.setUserInStorage(user);
-          if (user.rol === 'CLIENTE') {
-            this.router.navigate(['/cliente']);
-          } else if (user.rol === 'EMPLEADO' || user.rol === 'ADMIN') {
-            this.router.navigate(['/empleado']);
-          } else {
-            this.router.navigate(['/auth/login']); // Fallback
-          }
+          // Navigate to the stored redirectUrl or to a default dashboard
+          const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
+          this.redirectUrl = null; // Clear the redirectUrl after using it
+          this.router.navigate([urlToNavigate]);
         },
         error: (err) => {
           console.error('Failed to fetch user details after login', err);
-          this.setUserInStorage(null); // Limpiar en caso de error
-          this.router.navigate(['/auth/login']); // Volver al login
+          this.setUserInStorage(null);
+          this.router.navigate(['/auth/login']);
         }
       });
   }
 
-
   registerCliente(cliente: Cliente): Observable<Cliente> {
-    return this.http.post<Cliente>(`${this.backendUrl}${this.apiPrefix}/clientes/register`, cliente, { withCredentials: true });
+    return this.http.post<Cliente>(`${this.backendUrl}${this.apiPrefix}/clientes/register`, cliente);
   }
 
   registerEmpleado(empleado: Empleado): Observable<Empleado> {
@@ -100,7 +97,7 @@ export class AuthService {
   }
 
   logout(): Observable<any> {
-    return this.http.post(`${this.backendUrl}/logout`, {}, { // /logout está en la raíz
+    return this.http.post(`${this.backendUrl}/logout`, {}, {
         observe: 'response',
         withCredentials: true
     }).pipe(
@@ -109,11 +106,10 @@ export class AuthService {
         this.router.navigate(['/auth/login']);
       }),
       catchError(err => {
-        console.error('Logout failed', err);
-        // Aunque falle, intentamos limpiar localmente
-        this.setUserInStorage(null);
-        this.router.navigate(['/auth/login']);
-        return EMPTY; // O manejar el error de otra forma
+        console.error('Logout failed, but cleaning local state anyway.', err);
+        this.setUserInStorage(null); // Ensure local state is cleared
+        this.router.navigate(['/auth/login']); // Navigate to login
+        return EMPTY;
       })
     );
   }
@@ -128,13 +124,18 @@ export class AuthService {
 
   hasRole(expectedRole: 'CLIENTE' | 'EMPLEADO' | 'ADMIN'): boolean {
     const user = this.getCurrentUser();
-    return !!user && user.rol === expectedRole;
+    if (!user) return false;
+    if (expectedRole === 'ADMIN') {
+        return user.rol === 'ADMIN';
+    }
+    if (expectedRole === 'EMPLEADO') {
+        return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
+    }
+    return user.rol === expectedRole;
   }
 
   isAdmin(): boolean {
     const user = this.getCurrentUser();
-    // En EmpleadoUserDetailsService, isAdmin se mapea a ROLE_ADMIN.
-    // O si AuthUser tiene un campo isAdmin: return !!user && user.rol === 'ADMIN' && user.isAdmin;
     return !!user && user.rol === 'ADMIN';
   }
 }
