@@ -1,10 +1,9 @@
-// src/app/shared/services/auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, catchError, EMPTY } from 'rxjs';
 import { Cliente } from '../models/cliente.model';
 import { Empleado } from '../models/empleado.model';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../environments/environment'; // This path should now be correct
 import { Router } from '@angular/router';
 
 export interface AuthUser { // Interfaz unificada para el usuario en el frontend

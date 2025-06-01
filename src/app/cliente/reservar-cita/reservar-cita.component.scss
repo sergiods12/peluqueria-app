@@ -1,0 +1,78 @@
+.tramo-card {
+  border: 1px solid #e0e0e0; // Neutral border
+  border-radius: 0.375rem; // Bootstrap's default card border-radius
+  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  min-height: 65px; // Ensure a consistent height for cards
+  font-size: 0.85rem;
+
+  .card-body {
+    padding: 0.5rem; // Reduced padding
+  }
+
+  .tramo-time {
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .tramo-status {
+    font-size: 0.7rem;
+    display: block;
+  }
+
+  // Base for non-interactive states (Default Grey)
+  &.tramo-unavailable, // Not defined by employee or backend
+  &.tramo-available-not-clickable { // Defined, but not a valid start for current service duration
+    background-color: #e9ecef; // Bootstrap light grey
+    color: #6c757d;            // Muted text
+    cursor: not-allowed;
+    border-color: #ced4da;
+  }
+
+  // Clickable & Available (but not yet selected) - User Requirement: Grey
+  &.tramo-available-clickable {
+    background-color: #f8f9fa; // A slightly different grey or a very light blue if distinction is needed
+    color: #343a40;
+    border: 1px solid #adb5bd;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #e2e6ea;
+      border-color: #9fa6ae;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.075);
+    }
+  }
+
+  // Red (Reserved by others)
+  &.tramo-reserved {
+    background-color: #dc3545; // Bootstrap's danger color
+    color: white;
+    border-color: #dc3545;
+    cursor: not-allowed;
+    .tramo-status {
+        color: white !important; // Ensure text is readable
+    }
+  }
+
+  // Green (Selected by current client)
+  &.tramo-selected {
+    background-color: #28a745; // Bootstrap's success color
+    color: white;
+    border-color: #28a745;
+    font-weight: bold; // Make selected stand out more
+    transform: scale(1.02); // Slightly larger
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+     .tramo-status {
+        color: white !important; // Ensure text is readable
+    }
+  }
+}
+
+// Ensure form controls and other elements have some spacing
+.form-label {
+  margin-bottom: 0.25rem;
+}
+.form-select, .form-control {
+  margin-bottom: 1rem;
+}

@@ -31,34 +31,31 @@ export class CancelarReservaClienteComponent implements OnInit {
   }
 
   cargarMisReservas(): void {
-    if (!this.currentUser || !this.currentUser.id) return;
-    this.isLoading = true;
-    this.mensajeError = null;
-    this.mensajeExito = null;
+  if (!this.currentUser || !this.currentUser.id) return;
+  this.isLoading = true;
+  this.mensajeError = null;
+  this.mensajeExito = null;
 
-    // **NECESITAS UN ENDPOINT EN EL BACKEND** para obtener solo las reservas del cliente actual.
-    // Por ejemplo: GET /api/tramos/cliente/{clienteId} o GET /api/clientes/me/reservas
-    // La siguiente línea es una SIMULACIÓN. DEBES REEMPLAZARLA.
-    this.tramoService.getTramosParaClienteSimulado(this.currentUser.id).subscribe({
-      next: (tramos) => {
-        // Filtrar para mostrar solo las que no están disponibles (reservadas por este cliente)
-        // y que sean futuras o del día de hoy.
-        const hoy = new Date().toISOString().split('T')[0];
-        this.misReservas = tramos.filter(t => 
-            t.cliente?.id === this.currentUser?.id && 
-            !t.disponible &&
-            t.fecha >= hoy
-        ).sort((a,b) => new Date(a.fecha + 'T' + a.horaInicio).getTime() - new Date(b.fecha + 'T' + b.horaInicio).getTime());
-        this.isLoading = false;
-      },
-      error: (err) => {
-        this.mensajeError = 'Error al cargar tus reservas.';
-        console.error(err);
-        this.isLoading = false;
-      }
-    });
-  }
+  // Assuming tramoService.getTramosByCliente(this.currentUser.id) calls GET /api/clientes/{id}/reservas
+  // or a new endpoint GET /api/tramos/mis-reservas
+  this.tramoService.getTramosByCliente(this.currentUser.id).subscribe({ // Or a new method
+    next: (tramos) => {
+      const hoy = new Date().toISOString().split('T')[0];
+      this.misReservas = tramos.filter(t =>
+          // Backend should ideally only return relevant reservations
+          t.fecha >= hoy // Filter for future or today's reservations
+      ).sort((a,b) => new Date(a.fecha + 'T' + a.horaInicio).getTime() - new Date(b.fecha + 'T' + b.horaInicio).getTime());
+      this.isLoading = false;
+    },
+    error: (err) => {
+      this.mensajeError = 'Error al cargar tus reservas.';
+      console.error(err);
+      this.isLoading = false;
+    }
+  });
+}
 
+  
   cancelarReserva(tramo: Tramo): void {
     if (!tramo.id) return;
     if (confirm(`¿Estás seguro de que quieres cancelar tu reserva para el servicio "${tramo.servicio?.nombre || 'desconocido'}" el ${tramo.fecha} a las ${tramo.horaInicio}?`)) {

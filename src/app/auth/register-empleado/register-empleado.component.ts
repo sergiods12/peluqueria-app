@@ -2,12 +2,19 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { AuthService } from '../../shared/services/auth.service';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
 import { PeluqueriaService } from '../../shared/services/peluqueria.service'; // Para cargar peluquerías
 import { Empleado } from '../../shared/models/empleado.model';
 import { Peluqueria } from '../../shared/models/peluqueria.model';
 
 @Component({
   selector: 'app-register-empleado',
+  standalone: true, // Mark as standalone
+  imports: [
+    CommonModule, // For *ngIf, *ngFor
+    ReactiveFormsModule // For formGroup, formControlName
+  ],
   templateUrl: './register-empleado.component.html',
   // styleUrls: ['./register-empleado.component.css']
 })
