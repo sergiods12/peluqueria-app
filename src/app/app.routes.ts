@@ -1,3 +1,4 @@
+// src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterClienteComponent } from './auth/register-cliente/register-cliente.component';
@@ -11,6 +12,7 @@ import { CancelarReservaClienteComponent } from './cliente/cancelar-reserva-clie
 import { GestionCalendarioComponent } from './empleado/gestion-calendario/gestion-calendario.component';
 import { CrearPeluqueriaComponent } from './empleado/crear-peluqueria/crear-peluqueria.component';
 
+// DO NOT add "import { routes } from './app.routes';" in this file.
 export const routes: Routes = [
   { path: 'auth/login', component: LoginComponent },
   { path: 'auth/register-cliente', component: RegisterClienteComponent },

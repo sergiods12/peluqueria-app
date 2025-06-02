@@ -11,14 +11,15 @@ import { Peluqueria } from '../../shared/models/peluqueria.model';
   selector: 'app-register-empleado',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, FormsModule], // FormsModule for [ngValue]
-  templateUrl: './register-empleado.component.html',
-  // styleUrls: ['./register-empleado.component.css']
+  templateUrl: './register-empleado.component.html'
+  // styleUrls: ['./register-empleado.component.css'] // If you have styles
 })
 export class RegisterEmpleadoComponent implements OnInit {
   registerForm: FormGroup;
   errorMessage: string | null = null;
   successMessage: string | null = null;
   peluquerias: Peluqueria[] = [];
+  // Use this property name in your template's *ngFor
   rolesEmpleadoDescriptivos = ['Peluquero General', 'Especialista Cortes Mujer', 'Especialista Cortes Hombre', 'Especialista Color', 'Barbero', 'Recepcionista', 'Estilista Unisex'];
 
   constructor(
@@ -32,7 +33,7 @@ export class RegisterEmpleadoComponent implements OnInit {
       dni: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', Validators.required],
-      rol: ['', Validators.required], // Descriptive role
+      rol: ['', Validators.required], // This will bind to one of the rolesEmpleadoDescriptivos
       isAdmin: [false, Validators.required],
       peluqueriaId: [null, Validators.required],
       telefono: [''],
@@ -53,33 +54,6 @@ export class RegisterEmpleadoComponent implements OnInit {
   }
 
   onSubmit(): void {
-    this.markAllAsTouched();
-    if (this.registerForm.invalid) {
-      return;
-    }
-    this.errorMessage = null;
-    this.successMessage = null;
-
-    const { confirmPassword, peluqueriaId, ...empleadoDataPartial } = this.registerForm.value;
-
-    const empleadoParaEnviar: Empleado = {
-      ...empleadoDataPartial,
-      peluqueria: { id: peluqueriaId } as Peluqueria // Ensure only ID is sent if backend expects that
-    };
-
-    this.authService.registerEmpleado(empleadoParaEnviar).subscribe({
-      next: () => {
-        this.successMessage = '¡Empleado registrado con éxito!';
-        this.registerForm.reset({ isAdmin: false, peluqueriaId: null, rol: '' });
-      },
-      error: (err) => {
-        console.error('Employee registration failed', err);
-        this.errorMessage = err.error?.message || err.error?.error || 'Error en el registro del empleado.';
-      }
-    });
-  }
-
-   markAllAsTouched() {
     Object.values(this.registerForm.controls).forEach(control => {
       control.markAsTouched();
       control.updateValueAndValidity();
@@ -87,5 +61,39 @@ export class RegisterEmpleadoComponent implements OnInit {
     if (this.registerForm.errors?.['mismatch'] && this.registerForm.get('confirmPassword')) {
         this.registerForm.get('confirmPassword')?.setErrors({'mismatch': true});
     }
+
+    if (this.registerForm.invalid) {
+      return;
+    }
+    this.errorMessage = null;
+    this.successMessage = null;
+
+    // Destructure all values, then assemble the payload
+    const formValue = this.registerForm.value;
+    const empleadoParaEnviar: Empleado = {
+      id: undefined, // Or null, depending on your backend for new entities
+      nombre: formValue.nombre,
+      email: formValue.email,
+      dni: formValue.dni,
+      password: formValue.password, // Password will be hashed by backend
+      rol: formValue.rol, // Descriptive role
+      isAdmin: formValue.isAdmin,
+      peluqueria: { id: formValue.peluqueriaId } as Peluqueria, // Send as Peluqueria object with ID
+      telefono: formValue.telefono,
+      direccion: formValue.direccion,
+      horarioDisponible: '', // Add default or remove if not set here
+      tramos: [] // Add default or remove if not set here
+    };
+
+    this.authService.registerEmpleado(empleadoParaEnviar).subscribe({
+      next: () => {
+        this.successMessage = '¡Empleado registrado con éxito!';
+        this.registerForm.reset({ isAdmin: false, peluqueriaId: null, rol: '' }); // Reset form to initial state
+      },
+      error: (err) => {
+        console.error('Employee registration failed', err);
+        this.errorMessage = err.error?.message || err.error?.error || 'Error en el registro del empleado.';
+      }
+    });
   }
 }

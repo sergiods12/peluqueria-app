@@ -24,12 +24,15 @@ export class CrearPeluqueriaComponent {
     this.peluqueriaForm = this.fb.group({
       nombre: ['', Validators.required],
       direccion: ['', Validators.required],
-      telefono: ['', [Validators.required, Validators.pattern("^[0-9]*$")]]
+      telefono: ['', [Validators.required, Validators.pattern("^[0-9]{9,15}$")]] // Example pattern
     });
   }
 
   onSubmit(): void {
-    this.markAllAsTouched();
+    Object.values(this.peluqueriaForm.controls).forEach(control => {
+        control.markAsTouched();
+        control.updateValueAndValidity();
+    });
     if (this.peluqueriaForm.invalid) {
       return;
     }
@@ -39,20 +42,12 @@ export class CrearPeluqueriaComponent {
     const nuevaPeluqueria: Peluqueria = this.peluqueriaForm.value;
     this.peluqueriaService.createPeluqueria(nuevaPeluqueria).subscribe({
       next: (peluqueriaCreada) => {
-        this.mensajeExito = `Peluquería "${peluqueriaCreada.nombre}" creada con éxito. ID: ${peluqueriaCreada.id}`;
+        this.mensajeExito = `Peluquería "${peluqueriaCreada.nombre}" creada con éxito.`;
         this.peluqueriaForm.reset();
       },
       error: (err) => {
-        this.mensajeError = 'Error al crear la peluquería: ' + (err.error?.message || err.error || err.message);
-        console.error(err);
+        this.mensajeError = 'Error al crear la peluqueria: ' + (err.error?.message || err.message);
       }
-    });
-  }
-
-  markAllAsTouched() {
-    Object.values(this.peluqueriaForm.controls).forEach(control => {
-      control.markAsTouched();
-      control.updateValueAndValidity();
     });
   }
 }

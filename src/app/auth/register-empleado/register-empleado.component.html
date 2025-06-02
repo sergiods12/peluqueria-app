@@ -64,7 +64,7 @@
             <select id="rolEmpleado" formControlName="rol" class="form-select"
                     [ngClass]="{ 'is-invalid': registerForm.get('rol')?.touched && registerForm.get('rol')?.invalid }">
               <option value="" disabled>-- Selecciona un rol --</option>
-              <option *ngFor="let rol of rolesEmpleado" [value]="rol">{{ rol }}</option>
+              <option *ngFor="let rol of rolesEmpleadoDescriptivos" [value]="rol">{{ rol }}</option>
               <option value="Mujer">Especialista en Mujer</option>
               <option value="Hombre">Especialista en Hombre</option>
               <option value="Ambos">Especialista en Ambos</option>
