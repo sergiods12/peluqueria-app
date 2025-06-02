@@ -18,9 +18,7 @@ export const routes: Routes = [
   { path: 'auth/register-cliente', component: RegisterClienteComponent },
   {
     path: 'auth/register-empleado',
-    component: RegisterEmpleadoComponent,
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['ADMIN'] }
+    component: RegisterEmpleadoComponent // Guards removed to make it publicly accessible
   },
   {
     path: 'cliente',

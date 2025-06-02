@@ -1,38 +1,60 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm" *ngIf="authService.isLoggedIn()">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm" *ngIf="currentUser$ | async as user">
   <div class="container-fluid">
     <a class="navbar-brand" routerLink="/">Gestión Peluquería</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdownUser" aria-controls="navbarNavDropdownUser" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNavDropdown">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0" *ngIf="currentUser$ | async as user">
-        <li class="nav-item" *ngIf="user.rol === 'CLIENTE'">
-          <a class="nav-link" routerLink="/cliente/reservar" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Reservar Cita</a>
-        </li>
-        <li class="nav-item" *ngIf="user.rol === 'CLIENTE'">
-          <a class="nav-link" routerLink="/cliente/cancelar" routerLinkActive="active">Mis Reservas</a>
-        </li>
+    <div class="collapse navbar-collapse" id="navbarNavDropdownUser">
+      <!-- 'user' ya está disponible aquí gracias al *ngIf="currentUser$ | async as user" en el <nav> padre -->
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item" *ngIf="user.rol === 'CLIENTE'">
+            <a class="nav-link" routerLink="/cliente/reservar" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Reservar Cita</a>
+          </li>
+          <li class="nav-item" *ngIf="user.rol === 'CLIENTE'">
+            <a class="nav-link" routerLink="/cliente/cancelar" routerLinkActive="active">Mis Reservas</a>
+          </li>
 
-        <li class="nav-item" *ngIf="user.rol === 'ADMIN'">
-          <a class="nav-link" routerLink="/empleado/crear-peluqueria" routerLinkActive="active">Crear Peluquería</a>
-        </li>
-        <li class="nav-item" *ngIf="user.rol === 'ADMIN'">
-          <a class="nav-link" routerLink="/auth/register-empleado" routerLinkActive="active">Registrar Empleado</a>
-        </li>
-        <li class="nav-item" *ngIf="user.rol === 'EMPLEADO' || user.rol === 'ADMIN'">
-          <a class="nav-link" routerLink="/empleado/calendario" routerLinkActive="active">Mi Calendario</a>
-        </li>
-      </ul>
-      <ul class="navbar-nav ms-auto" *ngIf="currentUser$ | async as user">
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Hola, {{ user.nombre }} ({{ user.rol }})
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-            <li><button class="dropdown-item" type="button" (click)="logout()">Cerrar Sesión</button></li>
-          </ul>
-        </li>
-      </ul>
+          <li class="nav-item" *ngIf="user.rol === 'ADMIN'">
+            <a class="nav-link" routerLink="/empleado/crear-peluqueria" routerLinkActive="active">Crear Peluquería</a>
+          </li>
+          <li class="nav-item" *ngIf="user.rol === 'ADMIN'">
+            <a class="nav-link" routerLink="/auth/register-empleado" routerLinkActive="active">Registrar Empleado</a>
+          </li>
+
+          <li class="nav-item" *ngIf="user.rol === 'EMPLEADO' || user.rol === 'ADMIN'">
+            <a class="nav-link" routerLink="/empleado/calendario" routerLinkActive="active">Mi Calendario</a>
+          </li>
+        </ul>
+
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <button class="nav-link btn btn-link" type="button" (click)="logout()">Cerrar Sesión</button>
+          </li>
+          <li class="nav-item">
+            <span class="navbar-text ms-2"> <!-- ms-2 para un pequeño margen a la izquierda -->
+              Hola, {{ user.nombre }} ({{ user.rol }})
+            </span>
+          </li>
+        </ul>
     </div>
   </div>
 </nav>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm" *ngIf="!(currentUser$ | async)">
+    <div class="container-fluid">
+      <a class="navbar-brand" routerLink="/">Peluquería App</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavGuest" aria-controls="navbarNavGuest" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNavGuest">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/auth/login" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Iniciar Sesión</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/auth/register-cliente" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Crear Cuenta Cliente</a>
+          </li>
+          </ul>
+      </div>
+    </div>
+  </nav>

@@ -1,34 +1,42 @@
 // src/app/shared/navbar/navbar.component.ts
-import { Component, OnInit } from '@angular/core';
-import { AuthService, AuthUser } from '../services/auth.service'; // Corrected path
+import { Component } from '@angular/core';
+import { AuthService, AuthUser } from '../services/auth.service';
 import { Router, RouterModule } from '@angular/router';
-import { Observable } from 'rxjs';
-import { CommonModule } from '@angular/common';
+import { Observable } from 'rxjs'; // Se eliminó la importación de Subscription ya que no se usa
+import { CommonModule } from '@angular/common'; // Para async pipe, *ngIf
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './navbar.component.html',
-  // styleUrls: ['./navbar.component.css'] // Ensure this path is correct if used
+  styleUrls: ['./navbar.component.scss'] // o .css, o eliminar si no se usa
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent {
+  // currentUser$ se usará en la plantilla con el pipe async
   currentUser$: Observable<AuthUser | null>;
 
-  constructor(public authService: AuthService, private router: Router) {
+  constructor(
+    public authService: AuthService, // Hecho público para acceso potencial desde la plantilla si fuera necesario
+    private router: Router
+  ) {
     this.currentUser$ = this.authService.currentUser$;
+    console.log('NavbarComponent: Constructor - currentUser$ inicializado.');
   }
 
-  ngOnInit(): void {}
-
-  logout() {
+  logout(): void {
+    console.log('NavbarComponent: Botón Logout presionado.');
     this.authService.logout().subscribe({
       next: () => {
-        // Navigation is handled within authService.logout()
+        console.log('NavbarComponent: Logout procesado por AuthService. Redirección debería haber ocurrido.');
+        // La navegación y la actualización del estado son manejadas principalmente por AuthService.
       },
       error: (err) => {
-        console.error('Logout error from navbar', err);
-        this.router.navigate(['/auth/login']); // Fallback navigation
+        console.error('NavbarComponent: Error en la respuesta del logout del servicio:', err);
+        // Fallback de navegación. Aunque AuthService también intenta navegar,
+        // esto puede ser útil si authService.logout() falla antes de su propio catchError
+        // o si el error se vuelve a lanzar.
+        this.router.navigate(['/auth/login']);
       }
     });
   }

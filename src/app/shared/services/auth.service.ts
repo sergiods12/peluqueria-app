@@ -20,16 +20,27 @@ export interface AuthUser {
 export class AuthService {
   private backendUrl = environment.apiUrl;
   private apiPrefix = environment.apiPrefix;
+
   private currentUserSubject = new BehaviorSubject<AuthUser | null>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();
   public redirectUrl: string | null = null;
 
-  constructor(private http: HttpClient, private router: Router) { }
+  constructor(private http: HttpClient, private router: Router) {
+    console.log('AuthService: Instanciado. Usuario inicial desde storage:', this.currentUserSubject.value);
+  }
 
   private getUserFromStorage(): AuthUser | null {
     if (typeof localStorage !== 'undefined') {
-      const user = localStorage.getItem('currentUser');
-      return user ? JSON.parse(user) : null;
+      const userJson = localStorage.getItem('currentUser');
+      if (userJson) {
+        try {
+          return JSON.parse(userJson);
+        } catch (e) {
+          console.error('AuthService: Error al parsear currentUser de localStorage', e);
+          localStorage.removeItem('currentUser');
+          return null;
+        }
+      }
     }
     return null;
   }
@@ -42,75 +53,78 @@ export class AuthService {
         localStorage.removeItem('currentUser');
       }
     }
-    this.currentUserSubject.next(user);
+    console.log('AuthService: setUserInStorage actualizando currentUserSubject con:', user);
+    this.currentUserSubject.next(user); // <<<--- NOTIFICA A LOS SUSCRIPTORES (COMO EL NAVBAR)
   }
 
-  login(email: string, password: string): Observable<void> {
-    console.log("AuthService: Iniciando petición POST a /login");
+  login(email: string, password: string, isEmpleadoLogin: boolean = false): Observable<void> {
+    console.log(`AuthService: Iniciando POST a /login para email: ${email}, como empleado: ${isEmpleadoLogin}`);
     const headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded');
-    const body = new HttpParams().set('username', email).set('password', password);
+    let body = new HttpParams()
+      .set('username', email)
+      .set('password', password);
+    body = body.set('isEmpleado', isEmpleadoLogin.toString()); // Añadimos el nuevo parámetro
 
     return this.http.post(`${this.backendUrl}/login`, body.toString(), {
       headers: headers,
-      observe: 'response',    // Observar la respuesta HTTP completa
-      responseType: 'text',   // <<<--- CAMBIO TEMPORAL PARA DEPURAR: Tratar la respuesta como texto
+      observe: 'response',
+      responseType: 'text',
       withCredentials: true
     }).pipe(
-      map((response: HttpResponse<string>) => { // El cuerpo de la respuesta ahora es string
-        console.log("AuthService: Respuesta completa recibida del POST a /login", response);
-        console.log("AuthService: Cuerpo de la respuesta (como texto):", response.body);
-
-        if (response.status === 200) { // Éxito explícito de RestAuthenticationSuccessHandler
-          // Intentamos parsear el cuerpo por si es el JSON esperado
-          try {
-            const jsonBody = response.body ? JSON.parse(response.body) : {};
-            console.log("AuthService: Cuerpo de respuesta 200 parseado como JSON:", jsonBody);
-            // Aquí podrías verificar jsonBody.message si tu success handler lo envía
-            console.log("AuthService: POST a /login con 200 OK, llamando a fetchUserDetailsAndNavigate.");
-            this.fetchUserDetailsAndNavigate();
-          } catch (e) {
-            console.warn("AuthService: Respuesta 200 OK de /login pero no es JSON válido o está vacío. Procediendo igualmente a fetchUserDetails.", response.body, e);
-            // Si el success handler solo devuelve 200 OK sin cuerpo, o un cuerpo no JSON,
-            // igual procedemos a intentar obtener los detalles del usuario, ya que la sesión debería estar establecida.
-            this.fetchUserDetailsAndNavigate();
-          }
+      map((response: HttpResponse<string>) => {
+        console.log("AuthService: Respuesta del POST a /login:", response);
+        if (response.status === 200) {
+          console.log("AuthService: Login HTTP 200 OK. Cuerpo:", response.body, "Llamando a fetchUserDetailsAndNavigate.");
+          this.fetchUserDetailsAndNavigate(); // CRUCIAL: Obtener detalles del usuario y actualizar estado
         } else {
-          // Si el status no es 200, lo consideramos un error para el flujo de login
-          // El failureHandler debería devolver un 401 con un cuerpo JSON.
-          console.error("AuthService: POST a /login no devolvió 200 OK:", response.status, response.body);
-          let errorMessage = `Login falló con estado: ${response.status}`;
-          if (response.body) {
-              try {
-                  const errorBody = JSON.parse(response.body);
-                  errorMessage = errorBody.message || errorMessage;
-              } catch (e) { /* no era json, usar el cuerpo como string si existe */ 
-                  errorMessage = response.body || errorMessage;
-              }
-          }
-          throw new Error(errorMessage); // Será atrapado por catchError
+          console.error("AuthService: Respuesta inesperada de /login:", response);
+          throw new Error(`Respuesta inesperada del servidor: ${response.status}`);
         }
       }),
       catchError(err => {
-        // Este catchError atrapa errores de red, o los errores lanzados desde el map
-        console.error('AuthService: Error en la petición POST a /login (catchError global):', err);
+        console.error('AuthService: Error en la petición POST a /login (catchError):', err);
         this.setUserInStorage(null);
-        // Propagar el error para que el componente lo maneje (o un error más genérico)
-        const httpError = err as any; // Para acceder a status o message si es un HttpErrorResponse
-        throw new Error(httpError.error?.message || httpError.message || 'Error de autenticación o conexión.');
+        let errorMessage = 'Error de autenticación o conexión.';
+        if (err.status === 401) {
+          errorMessage = 'Email o contraseña incorrectos.';
+          // Comprobar si err.error es una cadena y podría ser JSON antes de intentar parsear
+          if (err.error && typeof err.error === 'string') {
+            try {
+              const errorBody = JSON.parse(err.error);
+              // Usar el mensaje del errorBody solo si es una cadena válida y no vacía
+              if (errorBody && typeof errorBody.message === 'string' && errorBody.message.trim() !== '') {
+                errorMessage = errorBody.message;
+              }
+            } catch (e) {
+              // El cuerpo del error no era JSON válido. Mantenemos el mensaje de error genérico.
+              console.warn('AuthService: El cuerpo de la respuesta de error no era JSON válido:', err.error);
+              // Opcionalmente, si err.error es texto plano y quieres mostrarlo:
+              // errorMessage = err.error; (¡Cuidado con mostrar HTML o información sensible!)
+            }
+          }
+        }
+        throw new Error(errorMessage);
       })
     );
   }
 
   fetchUserDetailsAndNavigate() {
-    console.log("AuthService: Iniciando fetchUserDetailsAndNavigate...");
+    console.log("AuthService: Iniciando fetchUserDetailsAndNavigate para /api/auth/me...");
     this.http.get<AuthUser>(`${this.backendUrl}${this.apiPrefix}/auth/me`, { withCredentials: true })
       .subscribe({
         next: (user) => {
           console.log("AuthService: Detalles del usuario recibidos de /api/auth/me:", user);
-          this.setUserInStorage(user);
-          const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
-          this.redirectUrl = null;
-          this.router.navigate([urlToNavigate]);
+          if (user && user.id != null && user.email && user.rol && user.nombre) {
+            this.setUserInStorage(user); // <<<--- AQUÍ SE ACTUALIZA EL ESTADO GLOBALMENTE
+            const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
+            this.redirectUrl = null;
+            console.log("AuthService: Redirigiendo a:", urlToNavigate);
+            this.router.navigate([urlToNavigate]);
+          } else {
+            console.error("AuthService: Datos de usuario inválidos desde /api/auth/me", user);
+            this.setUserInStorage(null);
+            this.router.navigate(['/auth/login']);
+          }
         },
         error: (err) => {
           console.error('AuthService: Fallo al obtener detalles del usuario de /api/auth/me:', err);
@@ -120,38 +134,54 @@ export class AuthService {
       });
   }
 
-  // ... resto de los métodos de AuthService (registerCliente, registerEmpleado, logout, etc.)
-  registerCliente(cliente: Cliente): Observable<Cliente> {
-    return this.http.post<Cliente>(`${this.backendUrl}${this.apiPrefix}/clientes/register`, cliente);
-  }
-
-  registerEmpleado(empleado: Empleado): Observable<Empleado> {
-    return this.http.post<Empleado>(`${this.backendUrl}${this.apiPrefix}/empleados`, empleado, { withCredentials: true });
-  }
-
   logout(): Observable<any> {
-    return this.http.post(`${this.backendUrl}/logout`, {}, { observe: 'response', responseType: 'text', withCredentials: true }).pipe(
+    console.log("AuthService: Iniciando logout...");
+    return this.http.post(`${this.backendUrl}/logout`, {}, {
+      observe: 'response',
+      responseType: 'text',
+      withCredentials: true
+    }).pipe(
       tap((response) => {
-        console.log("Logout response status:", response.status);
-        this.setUserInStorage(null);
-        this.router.navigate(['/auth/login']);
+        console.log("AuthService: Respuesta del logout backend, status:", response.status);
+        this.setUserInStorage(null); // Limpia el usuario y actualiza el BehaviorSubject
+        this.router.navigate(['/auth/login']); // Redirige al login
       }),
       catchError((err) => {
-        console.error('Logout failed, but cleaning local state anyway.', err);
+        console.error('AuthService: Error durante el logout, limpiando estado local de todas formas.', err);
         this.setUserInStorage(null);
         this.router.navigate(['/auth/login']);
         return EMPTY;
       })
     );
   }
-  getCurrentUser = () => this.currentUserSubject.value;
-  isLoggedIn = () => !!this.getCurrentUser();
-  hasRole(role: 'CLIENTE' | 'EMPLEADO' | 'ADMIN'): boolean {
+
+  getCurrentUser(): AuthUser | null {
+    return this.currentUserSubject.value;
+  }
+
+  isLoggedIn(): boolean {
+    return !!this.getCurrentUser();
+  }
+
+  hasRole(expectedRole: 'CLIENTE' | 'EMPLEADO' | 'ADMIN'): boolean {
     const user = this.getCurrentUser();
     if (!user) return false;
-    if (role === 'ADMIN') return user.rol === 'ADMIN';
-    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
-    return user.rol === role;
+    if (expectedRole === 'ADMIN') return user.rol === 'ADMIN';
+    if (expectedRole === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
+    return user.rol === expectedRole;
   }
-  isAdmin = () => this.hasRole('ADMIN');
+
+  isAdmin(): boolean {
+    return this.hasRole('ADMIN');
+  }
+
+  // Métodos de registro
+  registerCliente(cliente: Cliente): Observable<Cliente> {
+    return this.http.post<Cliente>(`${this.backendUrl}${this.apiPrefix}/clientes/register`, cliente);
+  }
+
+  registerEmpleado(empleado: Empleado): Observable<Empleado> {
+    // Asegúrate que el endpoint y el cuerpo de la solicitud sean los correctos para tu backend
+    return this.http.post<Empleado>(`${this.backendUrl}${this.apiPrefix}/empleados/register`, empleado, { withCredentials: true });
+  }
 }
