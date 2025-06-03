@@ -16,7 +16,7 @@ import { Peluqueria } from '../../shared/models/peluqueria.model';
   styleUrls: ['./register-empleado.component.scss'] // o .css, o elimina si no tienes
 })
 export class RegisterEmpleadoComponent implements OnInit {
-  registerEmpleadoForm: FormGroup; // <--- Renombrado aquí
+  registerEmpleadoForm: FormGroup;
   errorMessage: string | null = null;
   successMessage: string | null = null;
   peluquerias: Peluqueria[] = [];
@@ -27,14 +27,14 @@ export class RegisterEmpleadoComponent implements OnInit {
     private authService: AuthService,
     private peluqueriaService: PeluqueriaService
   ) {
-    this.registerEmpleadoForm = this.fb.group({ // <--- Renombrado aquí
+    this.registerEmpleadoForm = this.fb.group({
       nombre: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       dni: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', Validators.required],
-      rol: ['', Validators.required],
-      isAdmin: [false], // Validators.required eliminado de aquí
+      rol: ['', Validators.required], // Este es el rol descriptivo
+      isAdmin: [false], // Determina si es administrador del sistema
       peluqueriaId: [null, Validators.required],
       telefono: [''],
       direccion: ['']
@@ -54,22 +54,22 @@ export class RegisterEmpleadoComponent implements OnInit {
   }
 
   onSubmit(): void {
-    Object.values(this.registerEmpleadoForm.controls).forEach(control => { // <--- Renombrado aquí
+    Object.values(this.registerEmpleadoForm.controls).forEach(control => {
       control.markAsTouched();
       control.updateValueAndValidity();
     });
-    if (this.registerEmpleadoForm.errors?.['mismatch'] && this.registerEmpleadoForm.get('confirmPassword')) { // <--- Renombrado aquí
-        this.registerEmpleadoForm.get('confirmPassword')?.setErrors({'mismatch': true}); // <--- Renombrado aquí
+    if (this.registerEmpleadoForm.errors?.['mismatch'] && this.registerEmpleadoForm.get('confirmPassword')) {
+        this.registerEmpleadoForm.get('confirmPassword')?.setErrors({'mismatch': true});
     }
 
-    if (this.registerEmpleadoForm.invalid) { // <--- Renombrado aquí
+    if (this.registerEmpleadoForm.invalid) {
       this.errorMessage = "Por favor, completa el formulario correctamente.";
-      console.log('Formulario inválido:', this.registerEmpleadoForm.errors, this.registerEmpleadoForm.value);
-      // Para depuración, puedes ver qué control es inválido:
+      console.log('Formulario inválido. Errores:', this.registerEmpleadoForm.errors);
+      console.log('Valores del formulario:', this.registerEmpleadoForm.value);
       Object.keys(this.registerEmpleadoForm.controls).forEach(key => {
         const controlErrors = this.registerEmpleadoForm.get(key)?.errors;
         if (controlErrors != null) {
-          console.log('Control inválido:', key, controlErrors);
+          console.log('Control inválido:', key, 'Errores:', controlErrors);
         }
       });
       return;
@@ -77,19 +77,18 @@ export class RegisterEmpleadoComponent implements OnInit {
     this.errorMessage = null;
     this.successMessage = null;
 
-    const formValue = this.registerEmpleadoForm.value; // <--- Renombrado aquí
+    const formValue = this.registerEmpleadoForm.value;
     const empleadoParaEnviar: Empleado = {
       nombre: formValue.nombre,
       email: formValue.email,
       dni: formValue.dni,
       password: formValue.password,
-      rol: formValue.rol,
-      isAdmin: formValue.isAdmin,
+      rol: formValue.rol, // Rol descriptivo (ej: "Peluquero General")
+      isAdmin: formValue.isAdmin, // Booleano para determinar si es ADMIN del sistema
       peluqueria: { id: formValue.peluqueriaId } as Peluqueria,
       telefono: formValue.telefono,
       direccion: formValue.direccion,
       horarioDisponible: '', // Puedes añadir un valor por defecto o manejarlo de otra forma
-      // tramos: [] // Usualmente no se envían al crear
     };
     
     console.log("RegisterEmpleadoComponent: Enviando datos para registrar empleado:", empleadoParaEnviar);
@@ -97,17 +96,17 @@ export class RegisterEmpleadoComponent implements OnInit {
     this.authService.registerEmpleado(empleadoParaEnviar).subscribe({
       next: (empleadoCreado) => {
         this.successMessage = `¡Empleado "${empleadoCreado.nombre}" registrado con éxito!`;
-        this.registerEmpleadoForm.reset({ isAdmin: false, peluqueriaId: null, rol: '' }); // <--- Renombrado aquí
+        this.registerEmpleadoForm.reset({ isAdmin: false, peluqueriaId: null, rol: '' });
       },
       error: (err) => {
-        console.error('RegisterEmpleadoComponent: Error en el registro:', err);
-        // err ya es un HttpErrorResponse
+        console.error('RegisterEmpleadoComponent: Error en el registro HTTP:', err);
         if (err.status === 401) {
             this.errorMessage = "No autorizado. Necesitas ser administrador para realizar esta acción.";
         } else if (err.status === 403) {
             this.errorMessage = "Acceso denegado. No tienes los permisos necesarios.";
         } else {
-            this.errorMessage = err.error?.message || err.message || 'Error en el registro del empleado.';
+            // Intenta mostrar el mensaje de error del backend si está disponible
+            this.errorMessage = err.error?.message || err.message || 'Error en el registro del empleado. Revisa la consola para más detalles.';
         }
       }
     });

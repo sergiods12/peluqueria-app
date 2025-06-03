@@ -11,7 +11,7 @@ export interface AuthUser {
   id: number;
   nombre: string;
   email: string;
-  rol: 'CLIENTE' | 'EMPLEADO' | 'ADMIN';
+  rol: 'CLIENTE' | 'EMPLEADO' | 'ADMIN'; // Rol del sistema
   isAdmin?: boolean; // Opcional, ya que el rol ADMIN lo implica
 }
 
@@ -106,6 +106,13 @@ export class AuthService {
       next: (user) => {
         console.log("AuthService: Detalles del usuario recibidos de /api/auth/me:", user);
         if (user && user.id != null && user.email && user.rol && user.nombre) {
+          // Asegurarse que el rol sea uno de los esperados por AuthUser
+          if (!['CLIENTE', 'EMPLEADO', 'ADMIN'].includes(user.rol)) {
+            console.error("AuthService: Rol de usuario inválido recibido de /api/auth/me:", user.rol);
+            this.setUserInStorage(null);
+            this.router.navigate(['/auth/login']);
+            return;
+          }
           this.setUserInStorage(user);
           const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
           this.redirectUrl = null;
@@ -137,12 +144,10 @@ export class AuthService {
     return this.http.post<Cliente>(`${this.backendUrl}${this.apiPrefix}/clientes/register`, cliente, { withCredentials: true });
   }
 
-  // Asegúrate que este método se usa para registrar empleados y que la URL es correcta
   registerEmpleado(empleado: Empleado): Observable<Empleado> {
-    // La URL correcta es /api/empleados según el EmpleadoController y SecurityConfig
-    const registerEmpleadoUrl = `${this.backendUrl}${this.apiPrefix}/empleados`; // Sin /register al final
+    const registerEmpleadoUrl = `${this.backendUrl}${this.apiPrefix}/empleados`;
     console.log("AuthService: Intentando registrar empleado en URL:", registerEmpleadoUrl, "con datos:", empleado);
-    return this.http.post<Empleado>(registerEmpleadoUrl, empleado, { withCredentials: true }); // <<<--- MUY IMPORTANTE withCredentials: true
+    return this.http.post<Empleado>(registerEmpleadoUrl, empleado, { withCredentials: true });
   }
 
   getCurrentUser = () => this.currentUserSubject.value;
@@ -151,7 +156,7 @@ export class AuthService {
     const user = this.getCurrentUser();
     if (!user) return false;
     if (role === 'ADMIN') return user.rol === 'ADMIN';
-    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
+    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN'; // Un ADMIN también es un EMPLEADO en términos de acceso a rutas de empleado
     return user.rol === role;
   }
   isAdmin = () => this.hasRole('ADMIN');

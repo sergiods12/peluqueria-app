@@ -43,7 +43,7 @@ export const routes: Routes = [
       {
         path: 'crear-peluqueria',
         component: CrearPeluqueriaComponent,
-        canActivate: [roleGuard],
+        canActivate: [roleGuard], // Solo roleGuard aquí, authGuard ya está en el padre
         data: { roles: ['ADMIN'] }
       },
       { path: '', redirectTo: 'calendario', pathMatch: 'full' }
