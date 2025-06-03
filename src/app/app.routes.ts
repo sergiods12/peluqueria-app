@@ -18,7 +18,7 @@ export const routes: Routes = [
   { path: 'auth/register-cliente', component: RegisterClienteComponent },
   {
     path: 'auth/register-empleado',
-    component: RegisterEmpleadoComponent // Guards removed to make it publicly accessible
+    component: RegisterEmpleadoComponent // Guards removed to allow public access from login page
   },
   {
     path: 'cliente',
