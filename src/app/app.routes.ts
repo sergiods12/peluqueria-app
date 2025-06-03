@@ -18,7 +18,9 @@ export const routes: Routes = [
   { path: 'auth/register-cliente', component: RegisterClienteComponent },
   {
     path: 'auth/register-empleado',
-    component: RegisterEmpleadoComponent // Guards removed to allow public access from login page
+    component: RegisterEmpleadoComponent,
+    canActivate: [authGuard, roleGuard], // Guards reactivados
+    data: { roles: ['ADMIN'] }          // Se requiere rol ADMIN
   },
   {
     path: 'cliente',

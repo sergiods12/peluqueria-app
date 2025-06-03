@@ -25,7 +25,8 @@ export class LoginComponent implements OnInit {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required],
-      isEmpleado: [false] // Control para el checkbox de "iniciar sesión como empleado"
+      isEmpleado: [false] // Este control puede permanecer si aún lo usas en la plantilla para alguna lógica UI,
+                          // pero ya no se pasa al método login del servicio.
     });
   }
 
@@ -34,11 +35,13 @@ export class LoginComponent implements OnInit {
     if (this.loginForm.valid) {
       const email = this.loginForm.value.email;
       const password = this.loginForm.value.password;
-      const isEmpleadoLogin = this.loginForm.value.isEmpleado;
+      // const isEmpleadoLogin = this.loginForm.value.isEmpleado; // Ya no se necesita pasar al servicio
 
-      this.authService.login(email, password, isEmpleadoLogin).subscribe({
+      // Corregir la llamada al método login, eliminando el tercer argumento
+      this.authService.login(email, password).subscribe({
         next: () => {
           console.log('LoginComponent: Login exitoso, AuthService se encargará de la redirección.');
+          // La redirección ahora es manejada por fetchUserDetailsAndNavigate dentro de AuthService
         },
         error: (err) => {
           this.errorMessage = err.message || 'Error al iniciar sesión. Por favor, inténtalo de nuevo.';

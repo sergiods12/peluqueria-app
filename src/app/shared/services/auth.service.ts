@@ -1,10 +1,10 @@
 // src/app/shared/services/auth.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http'; // HttpResponse importado
+import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, catchError, EMPTY, map } from 'rxjs';
-import { Cliente } from '../models/cliente.model'; // Asegúrate que esta ruta es correcta
+import { Cliente } from '../models/cliente.model';
 import { Empleado } from '../models/empleado.model';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../environments/environment'; // Asegúrate que esta ruta es correcta
 import { Router } from '@angular/router';
 
 export interface AuthUser {
@@ -12,9 +12,7 @@ export interface AuthUser {
   nombre: string;
   email: string;
   rol: 'CLIENTE' | 'EMPLEADO' | 'ADMIN';
-  // isAdmin ya está implícito en el rol 'ADMIN', pero si tu backend lo envía explícitamente, puedes mantenerlo.
-  // Si solo el rol es la fuente de verdad para isAdmin, puedes quitarlo de aquí.
-  isAdmin?: boolean; 
+  isAdmin?: boolean; // Opcional, ya que el rol ADMIN lo implica
 }
 
 @Injectable({
@@ -26,10 +24,10 @@ export class AuthService {
 
   private currentUserSubject = new BehaviorSubject<AuthUser | null>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();
-  public redirectUrl: string | null = null; // Para redirigir después del login
+  public redirectUrl: string | null = null;
 
   constructor(private http: HttpClient, private router: Router) {
-    console.log('AuthService: Instanciado. Usuario inicial desde storage:', this.currentUserSubject.value);
+    console.log('AuthService: Instanciado. Usando backendUrl:', this.backendUrl);
   }
 
   private getUserFromStorage(): AuthUser | null {
@@ -60,138 +58,101 @@ export class AuthService {
     this.currentUserSubject.next(user);
   }
 
-  login(email: string, password: string, isEmpleadoLogin: boolean = false): Observable<void> {
-    console.log(`AuthService: Iniciando petición POST a /login para email: ${email}, como empleado: ${isEmpleadoLogin}`);
+  login(email: string, password: string): Observable<void> {
+    const loginUrl = `${this.backendUrl}/login`;
+    console.log(`AuthService: Iniciando POST a ${loginUrl} para email:`, email);
     const headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded');
-    let body = new HttpParams()
-      .set('username', email)
-      .set('password', password);
-    body = body.set('isEmpleado', isEmpleadoLogin.toString()); // Añadimos el parámetro para el backend
+    const body = new HttpParams().set('username', email).set('password', password);
 
-    return this.http.post(`${this.backendUrl}/login`, body.toString(), {
+    return this.http.post(loginUrl, body.toString(), {
       headers: headers,
-      observe: 'response',    // Observar la respuesta HTTP completa
-      responseType: 'text',   // <<<--- CAMBIO IMPORTANTE: Tratar la respuesta como texto inicialmente
-      withCredentials: true   // Para enviar y recibir cookies de sesión
+      observe: 'response',
+      responseType: 'text',
+      withCredentials: true
     }).pipe(
-      map((response: HttpResponse<string>) => { // El cuerpo de la respuesta (response.body) ahora es un string
+      map((response: HttpResponse<string>) => {
         console.log("AuthService: Respuesta completa recibida del POST a /login:", response);
-        console.log("AuthService: Cuerpo de la respuesta (como texto):", response.body);
-        console.log("AuthService: Status de la respuesta:", response.status);
-
-        if (response.status === 200) { // Éxito explícito de nuestro RestAuthenticationSuccessHandler
-          // Aunque el cuerpo podría ser "{"message":"Login Exitoso"}",
-          // el hecho de que sea 200 OK es suficiente para proceder.
-          // La cookie de sesión ya debería estar establecida por el backend.
-          console.log("AuthService: POST a /login devolvió 200 OK. Llamando a fetchUserDetailsAndNavigate.");
+        if (response.status === 200) {
+          console.log("AuthService: Login HTTP 200 OK. Cuerpo:", response.body, "Llamando a fetchUserDetailsAndNavigate.");
           this.fetchUserDetailsAndNavigate();
         } else {
-          // Si el status no es 200 (por ejemplo, 401 del RestAuthenticationFailureHandler,
-          // u otro error inesperado que no fue atrapado por catchError antes).
-          console.error("AuthService: POST a /login no devolvió 200 OK en el map:", response.status, response.body);
+          console.error("AuthService: Respuesta inesperada de /login:", response);
           let errorMessage = `Login falló con estado: ${response.status}.`;
-          if (response.body) { // Intentar obtener un mensaje más específico si el cuerpo existe
+           if (response.body) {
               try {
-                  // Si el failure handler devuelve JSON, esto lo parseará
                   const errorBody = JSON.parse(response.body);
                   errorMessage = errorBody.message || errorBody.error || errorMessage;
-              } catch (e) { 
-                  // Si no es JSON, o está vacío, usar el cuerpo como texto si es útil
-                  if (response.body.length > 0 && response.body.length < 100) { // Evitar mensajes HTML largos
+              } catch (e) {
+                  if (response.body.length > 0 && response.body.length < 200) {
                     errorMessage = response.body;
                   }
               }
           }
-          throw new Error(errorMessage); // Esto será atrapado por el catchError de esta tubería (pipe)
+          throw new Error(errorMessage);
         }
       }),
       catchError(err => {
-        // Este catchError atrapa errores de red (ej. servidor caído, CORS no resuelto por preflight)
-        // o los errores lanzados desde el 'map' anterior.
-        console.error('AuthService: Error en la tubería de /login (catchError):', err);
-        this.setUserInStorage(null); // Limpiar cualquier estado de usuario persistente
-
-        // Preparar un mensaje de error para el componente.
-        // Si err ya es un Error con un mensaje, usarlo. Sino, crear uno genérico.
-        const message = (err instanceof Error) ? err.message : 'Error de autenticación o conexión desconocida.';
-        throw new Error(message); // Relanzar para que el componente LoginComponent lo maneje y muestre al usuario.
+        this.setUserInStorage(null);
+        const message = (err instanceof Error) ? err.message : (err.error?.message || err.message || 'Error de autenticación o conexión.');
+        throw new Error(message);
       })
     );
   }
 
   fetchUserDetailsAndNavigate() {
-    console.log("AuthService: Iniciando fetchUserDetailsAndNavigate para /api/auth/me...");
-    this.http.get<AuthUser>(`${this.backendUrl}${this.apiPrefix}/auth/me`, { withCredentials: true })
-      .subscribe({
-        next: (user) => {
-          console.log("AuthService: Detalles del usuario recibidos de /api/auth/me:", user);
-          if (user && user.id != null && user.email && user.rol && user.nombre) {
-            this.setUserInStorage(user);
-            const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
-            this.redirectUrl = null;
-            console.log("AuthService: Redirigiendo a:", urlToNavigate);
-            this.router.navigate([urlToNavigate]);
-          } else {
-            console.error("AuthService: Datos de usuario inválidos o incompletos desde /api/auth/me. Usuario recibido:", user);
-            this.setUserInStorage(null);
-            this.router.navigate(['/auth/login']);
-          }
-        },
-        error: (err) => {
-          console.error('AuthService: Fallo al obtener detalles del usuario de /api/auth/me:', err);
+    const userDetailsUrl = `${this.backendUrl}${this.apiPrefix}/auth/me`;
+    console.log(`AuthService: Iniciando fetchUserDetailsAndNavigate para ${userDetailsUrl}...`);
+    this.http.get<AuthUser>(userDetailsUrl, { withCredentials: true }).subscribe({
+      next: (user) => {
+        console.log("AuthService: Detalles del usuario recibidos de /api/auth/me:", user);
+        if (user && user.id != null && user.email && user.rol && user.nombre) {
+          this.setUserInStorage(user);
+          const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
+          this.redirectUrl = null;
+          this.router.navigate([urlToNavigate]);
+        } else {
+          console.error("AuthService: Datos de usuario inválidos desde /api/auth/me:", user);
           this.setUserInStorage(null);
           this.router.navigate(['/auth/login']);
         }
-      });
+      },
+      error: (err) => {
+        console.error('AuthService: Fallo al obtener detalles del usuario de /api/auth/me:', err);
+        this.setUserInStorage(null);
+        this.router.navigate(['/auth/login']);
+      }
+    });
   }
 
   logout(): Observable<any> {
-    console.log("AuthService: Iniciando logout...");
-    return this.http.post(`${this.backendUrl}/logout`, {}, {
-      observe: 'response',
-      responseType: 'text', // El logoutSuccessHandler de Spring devuelve 200 OK, el cuerpo puede ser texto o JSON
-      withCredentials: true
-    }).pipe(
-      tap((response) => {
-        console.log("AuthService: Respuesta del logout backend, status:", response.status, "Cuerpo:", response.body);
-        this.setUserInStorage(null);
-        this.router.navigate(['/auth/login']);
-      }),
-      catchError((err) => {
-        console.error('AuthService: Error durante el logout, limpiando estado local de todas formas.', err);
-        this.setUserInStorage(null);
-        this.router.navigate(['/auth/login']);
-        return EMPTY;
-      })
+    const logoutUrl = `${this.backendUrl}/logout`;
+    console.log(`AuthService: Iniciando logout a ${logoutUrl}...`);
+    return this.http.post(logoutUrl, {}, { observe: 'response', responseType: 'text', withCredentials: true }).pipe(
+      tap(() => { this.setUserInStorage(null); this.router.navigate(['/auth/login']); }),
+      catchError(() => { this.setUserInStorage(null); this.router.navigate(['/auth/login']); return EMPTY; })
     );
   }
 
-  getCurrentUser(): AuthUser | null {
-    return this.currentUserSubject.value;
+  registerCliente(cliente: Cliente): Observable<Cliente> {
+    return this.http.post<Cliente>(`${this.backendUrl}${this.apiPrefix}/clientes/register`, cliente, { withCredentials: true });
   }
 
-  isLoggedIn(): boolean {
-    return !!this.getCurrentUser();
+  // Asegúrate que este método se usa para registrar empleados y que la URL es correcta
+  registerEmpleado(empleado: Empleado): Observable<Empleado> {
+    // La URL correcta es /api/empleados según el EmpleadoController y SecurityConfig
+    const registerEmpleadoUrl = `${this.backendUrl}${this.apiPrefix}/empleados`; // Sin /register al final
+    console.log("AuthService: Intentando registrar empleado en URL:", registerEmpleadoUrl, "con datos:", empleado);
+    return this.http.post<Empleado>(registerEmpleadoUrl, empleado, { withCredentials: true }); // <<<--- MUY IMPORTANTE withCredentials: true
   }
 
-  hasRole(expectedRole: 'CLIENTE' | 'EMPLEADO' | 'ADMIN'): boolean {
+  getCurrentUser = () => this.currentUserSubject.value;
+  isLoggedIn = () => !!this.getCurrentUser();
+  hasRole(role: 'CLIENTE' | 'EMPLEADO' | 'ADMIN'): boolean {
     const user = this.getCurrentUser();
     if (!user) return false;
-    if (expectedRole === 'ADMIN') return user.rol === 'ADMIN';
-    if (expectedRole === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
-    return user.rol === expectedRole;
+    if (role === 'ADMIN') return user.rol === 'ADMIN';
+    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
+    return user.rol === role;
   }
-
-  isAdmin(): boolean {
-    return this.hasRole('ADMIN');
-  }
-
-  registerCliente(cliente: Cliente): Observable<Cliente> {
-    return this.http.post<Cliente>(`${this.backendUrl}${this.apiPrefix}/clientes/register`, cliente);
-  }
-
-  registerEmpleado(empleado: Empleado): Observable<Empleado> {
-    // Assuming your backend endpoint for registering employees is /api/empleados/register
-    return this.http.post<Empleado>(`${this.backendUrl}${this.apiPrefix}/empleados/register`, empleado, { withCredentials: true });
-}
+  isAdmin = () => this.hasRole('ADMIN');
 }
