@@ -1,18 +1,26 @@
+// c:\Users\Sergi\peluqueria-app\src\server.ts
 import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from '@angular/ssr/node';
-import express from 'express';
-import { dirname, resolve } from 'node:path';
+  CommonEngine
+} from '@angular/ssr';
+import express, { NextFunction, Request, Response } from 'express';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import bootstrap from './main.server'; // Asegúrate que esta es la exportación de tu main.server.ts
+import { APP_BASE_HREF } from '@angular/common';
 
+// El directorio de distribución del navegador (usualmente 'dist/peluqueria-app/browser')
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
+const indexHtml = existsSync(join(browserDistFolder, 'index.html'))
+  ? join(browserDistFolder, 'index.html')
+  : join(browserDistFolder, 'index.csr.html');
 
-const app = express();
-const angularApp = new AngularNodeAppEngine();
+const server = express();
+const commonEngine = new CommonEngine();
+
+server.set('view engine', 'html');
+server.set('views', browserDistFolder);
 
 /**
  * Example Express Rest API endpoints can be defined here.
@@ -20,7 +28,7 @@ const angularApp = new AngularNodeAppEngine();
  *
  * Example:
  * ```ts
- * app.get('/api/**', (req, res) => {
+ * server.get('/api/**', (req, res) => { // Changed app to server here for consistency
  *   // Handle API request
  * });
  * ```
@@ -29,38 +37,54 @@ const angularApp = new AngularNodeAppEngine();
 /**
  * Serve static files from /browser
  */
-app.use(
+server.get(
+  '*.*',
   express.static(browserDistFolder, {
     maxAge: '1y',
-    index: false,
-    redirect: false,
+    // index: false, // Not strictly necessary as indexHtml is handled by commonEngine
   }),
 );
 
 /**
  * Handle all other requests by rendering the Angular application.
  */
-app.use('/**', (req, res, next) => {
-  angularApp
-    .handle(req)
-    .then((response) =>
-      response ? writeResponseToNodeResponse(response, res) : next(),
-    )
-    .catch(next);
+server.get('*', (req: Request, res: Response, next: NextFunction) => {
+  const { protocol, originalUrl, baseUrl, headers } = req;
+
+  commonEngine
+    .render({
+      bootstrap,
+      documentFilePath: indexHtml,
+      url: `${protocol}://${headers.host}${originalUrl}`,
+      publicPath: browserDistFolder,
+      providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
+    })
+    .then((html: string) => res.send(html))
+    .catch((err: Error) => next(err));
 });
 
 /**
  * Start the server if this module is the main entry point.
  * The server listens on the port defined by the `PORT` environment variable, or defaults to 4000.
  */
-if (isMainModule(import.meta.url)) {
+function run(): void {
   const port = process.env['PORT'] || 4000;
-  app.listen(port, () => {
+  server.listen(port, () => {
     console.log(`Node Express server listening on http://localhost:${port}`);
   });
+}
+
+// Webpack will replace 'require.main' with '__webpack_require__.𝐦𝐚𝐢𝐧'
+// module.quasisequals require.main means that the file is being executed directly.
+declare const __webpack_require__: any;
+const mainModule = __webpack_require__?.main;
+const moduleFilename = fileURLToPath(import.meta.url);
+
+if (mainModule && mainModule.filename === moduleFilename || process.env['RUN_SERVER']) {
+  run();
 }
 
 /**
  * Request handler used by the Angular CLI (for dev-server and during build) or Firebase Cloud Functions.
  */
-export const reqHandler = createNodeRequestHandler(app);
+export { server as app }; // Export the express app instance, commonly named 'app'

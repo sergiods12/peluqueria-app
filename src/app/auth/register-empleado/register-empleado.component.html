@@ -1,68 +1,131 @@
-<div class="row justify-content-center mt-5">
-  <div class="col-md-6 col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h2 class="card-title text-center mb-4">Registrar Nuevo Empleado</h2>
-        <form [formGroup]="registerEmpleadoForm" (ngSubmit)="onSubmit()">
-          <div class="mb-3">
-            <label for="nombre" class="form-label">Nombre Completo</label>
-            <input type="text" id="nombre" formControlName="nombre" class="form-control"
-                   [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('nombre')?.touched && registerEmpleadoForm.get('nombre')?.invalid }">
-            <div *ngIf="registerEmpleadoForm.get('nombre')?.touched && registerEmpleadoForm.get('nombre')?.errors?.['required']" class="invalid-feedback">
-              El nombre es requerido.
-            </div>
-          </div>
+<!-- c:\Users\Sergi\peluqueria-app\src\app\auth\register-empleado\register-empleado.component.html -->
+<div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-7">
+        <div class="card shadow-sm">
+          <div class="card-body p-4 p-md-5">
+            <h2 class="card-title text-center mb-4">Registrar Nuevo Empleado</h2>
+            <form [formGroup]="registerEmpleadoForm" (ngSubmit)="onSubmit()" novalidate>
+              <!-- Campo Nombre -->
+              <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre Completo</label>
+                <input type="text" id="nombre" formControlName="nombre" class="form-control"
+                       [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('nombre')?.touched && registerEmpleadoForm.get('nombre')?.invalid }">
+                <div *ngIf="registerEmpleadoForm.get('nombre')?.touched && registerEmpleadoForm.get('nombre')?.errors?.['required']" class="invalid-feedback d-block">
+                  El nombre es requerido.
+                </div>
+              </div>
 
-          <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" id="email" formControlName="email" class="form-control"
-                   [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('email')?.touched && registerEmpleadoForm.get('email')?.invalid }">
-            <div *ngIf="registerEmpleadoForm.get('email')?.touched && registerEmpleadoForm.get('email')?.errors?.['required']" class="invalid-feedback">
-              El email es requerido.
-            </div>
-            <div *ngIf="registerEmpleadoForm.get('email')?.touched && registerEmpleadoForm.get('email')?.errors?.['email']" class="invalid-feedback">
-              Formato de email inválido.
-            </div>
-          </div>
+              <!-- Campo Email -->
+              <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" id="email" formControlName="email" class="form-control"
+                       [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('email')?.touched && registerEmpleadoForm.get('email')?.invalid }">
+                <div *ngIf="registerEmpleadoForm.get('email')?.touched && registerEmpleadoForm.get('email')?.errors?.['required']" class="invalid-feedback d-block">
+                  El email es requerido.
+                </div>
+                <div *ngIf="registerEmpleadoForm.get('email')?.touched && registerEmpleadoForm.get('email')?.errors?.['email']" class="invalid-feedback d-block">
+                  Formato de email inválido.
+                </div>
+              </div>
 
-          <div class="mb-3">
-            <label for="password" class="form-label">Contraseña</label>
-            <input type="password" id="password" formControlName="password" class="form-control"
-                   [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('password')?.touched && registerEmpleadoForm.get('password')?.invalid }">
-            <div *ngIf="registerEmpleadoForm.get('password')?.touched && registerEmpleadoForm.get('password')?.errors?.['required']" class="invalid-feedback">
-              La contraseña es requerida.
-            </div>
-            <div *ngIf="registerEmpleadoForm.get('password')?.touched && registerEmpleadoForm.get('password')?.errors?.['minlength']" class="invalid-feedback">
-              La contraseña debe tener al menos 6 caracteres.
-            </div>
-          </div>
+              <!-- Campo DNI -->
+              <div class="mb-3">
+                <label for="dni" class="form-label">DNI</label>
+                <input type="text" id="dni" formControlName="dni" class="form-control"
+                       [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('dni')?.touched && registerEmpleadoForm.get('dni')?.invalid }">
+                <div *ngIf="registerEmpleadoForm.get('dni')?.touched && registerEmpleadoForm.get('dni')?.errors?.['required']" class="invalid-feedback d-block">
+                  El DNI es requerido.
+                </div>
+              </div>
 
-          <div class="mb-3">
-            <label for="rol" class="form-label">Rol</label>
-            <select id="rol" formControlName="rol" class="form-select"
-                    [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('rol')?.touched && registerEmpleadoForm.get('rol')?.invalid }">
-              <option value="" disabled>Selecciona un rol</option>
-              <option value="EMPLEADO">Empleado</option>
-              <option value="ADMIN">Administrador</option>
-            </select>
-            <div *ngIf="registerEmpleadoForm.get('rol')?.touched && registerEmpleadoForm.get('rol')?.errors?.['required']" class="invalid-feedback">
-              El rol es requerido.
-            </div>
-          </div>
-          
-          <!-- Puedes añadir más campos específicos para empleados aquí -->
+              <!-- Campo Contraseña -->
+              <div class="mb-3">
+                <label for="password" class="form-label">Contraseña</label>
+                <input type="password" id="password" formControlName="password" class="form-control"
+                       [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('password')?.touched && registerEmpleadoForm.get('password')?.invalid }">
+                <div *ngIf="registerEmpleadoForm.get('password')?.touched && registerEmpleadoForm.get('password')?.errors?.['required']" class="invalid-feedback d-block">
+                  La contraseña es requerida.
+                </div>
+                <div *ngIf="registerEmpleadoForm.get('password')?.touched && registerEmpleadoForm.get('password')?.errors?.['minlength']" class="invalid-feedback d-block">
+                  La contraseña debe tener al menos 6 caracteres.
+                </div>
+              </div>
 
-          <div class="d-grid">
-            <button type="submit" class="btn btn-primary" [disabled]="registerEmpleadoForm.invalid">Registrar Empleado</button>
+              <!-- Campo Confirmar Contraseña -->
+              <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+                <input type="password" id="confirmPassword" formControlName="confirmPassword" class="form-control"
+                       [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('confirmPassword')?.touched && (registerEmpleadoForm.get('confirmPassword')?.invalid || registerEmpleadoForm.errors?.['mismatch']) }">
+                <div *ngIf="registerEmpleadoForm.get('confirmPassword')?.touched && registerEmpleadoForm.get('confirmPassword')?.errors?.['required']" class="invalid-feedback d-block">
+                  Confirmar la contraseña es requerido.
+                </div>
+                <div *ngIf="registerEmpleadoForm.get('confirmPassword')?.touched && registerEmpleadoForm.errors?.['mismatch'] && !registerEmpleadoForm.get('confirmPassword')?.errors?.['required']" class="invalid-feedback d-block">
+                  Las contraseñas no coinciden.
+                </div>
+              </div>
+
+              <!-- Campo Rol -->
+              <div class="mb-3">
+                <label for="rol" class="form-label">Rol del Empleado</label>
+                <select id="rol" formControlName="rol" class="form-select"
+                        [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('rol')?.touched && registerEmpleadoForm.get('rol')?.invalid }">
+                  <option value="" disabled>Selecciona un rol</option>
+                  <option *ngFor="let rolDesc of rolesEmpleadoDescriptivos" [value]="rolDesc">{{ rolDesc }}</option>
+                </select>
+                <div *ngIf="registerEmpleadoForm.get('rol')?.touched && registerEmpleadoForm.get('rol')?.errors?.['required']" class="invalid-feedback d-block">
+                  El rol es requerido.
+                </div>
+              </div>
+
+              <!-- Campo Peluquería -->
+              <div class="mb-3">
+                <label for="peluqueriaId" class="form-label">Peluquería Asignada</label>
+                <select id="peluqueriaId" formControlName="peluqueriaId" class="form-select"
+                        [ngClass]="{ 'is-invalid': registerEmpleadoForm.get('peluqueriaId')?.touched && registerEmpleadoForm.get('peluqueriaId')?.invalid }">
+                  <option [ngValue]="null" disabled>Selecciona una peluquería</option>
+                  <option *ngFor="let peluqueria of peluquerias" [value]="peluqueria.id">{{ peluqueria.nombre }}</option>
+                </select>
+                <div *ngIf="registerEmpleadoForm.get('peluqueriaId')?.touched && registerEmpleadoForm.get('peluqueriaId')?.errors?.['required']" class="invalid-feedback d-block">
+                  La peluquería es requerida.
+                </div>
+              </div>
+
+              <!-- Checkbox Es Administrador -->
+              <div class="mb-3 form-check">
+                <input type="checkbox" id="isAdmin" formControlName="isAdmin" class="form-check-input">
+                <label class="form-check-label" for="isAdmin">¿Es Administrador del Sistema?</label>
+              </div>
+
+              <!-- Campos Opcionales: Teléfono y Dirección -->
+              <div class="mb-3">
+                <label for="telefono" class="form-label">Teléfono (Opcional)</label>
+                <input type="tel" id="telefono" formControlName="telefono" class="form-control">
+              </div>
+              <div class="mb-3">
+                <label for="direccion" class="form-label">Dirección (Opcional)</label>
+                <input type="text" id="direccion" formControlName="direccion" class="form-control">
+              </div>
+
+              <!-- Mensajes de Error/Éxito -->
+              <div *ngIf="errorMessage" class="alert alert-danger mt-3 p-2 text-center" role="alert">
+                {{ errorMessage }}
+              </div>
+              <div *ngIf="successMessage" class="alert alert-success mt-3 p-2 text-center" role="alert">
+                {{ successMessage }}
+              </div>
+
+              <!-- Botón de Envío -->
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg" [disabled]="registerEmpleadoForm.invalid || registerEmpleadoForm.pending">
+                  <span *ngIf="!registerEmpleadoForm.pending">Registrar Empleado</span>
+                  <span *ngIf="registerEmpleadoForm.pending" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  <span *ngIf="registerEmpleadoForm.pending"> Registrando...</span>
+                </button>
+              </div>
+            </form>
           </div>
-          <div *ngIf="successMessage" class="alert alert-success mt-3 p-2 text-center">{{ successMessage }}</div>
-          <div *ngIf="errorMessage" class="alert alert-danger mt-3 p-2 text-center">{{ errorMessage }}</div>
-        </form>
-        <hr class="my-4">
-        <div class="text-center">
-          <a routerLink="/auth/login">Volver a Iniciar Sesión</a>
         </div>
       </div>
     </div>
   </div>
-</div>

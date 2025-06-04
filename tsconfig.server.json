@@ -1,0 +1,18 @@
+// c:\Users\Sergi\peluqueria-app\tsconfig.server.json
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/server",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"]
+  },
+  "files": [
+    "src/main.server.ts",
+    "src/server.ts"
+  ],
+  "angularCompilerOptions": {
+    // "entryModule": "./src/app/app.server.module#AppServerModule" // Not necessary for standalone apps
+  }
+}

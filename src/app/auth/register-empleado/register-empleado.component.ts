@@ -90,7 +90,7 @@ export class RegisterEmpleadoComponent implements OnInit {
       direccion: formValue.direccion,
       horarioDisponible: '', // Puedes añadir un valor por defecto o manejarlo de otra forma
     };
-    
+
     console.log("RegisterEmpleadoComponent: Enviando datos para registrar empleado:", empleadoParaEnviar);
 
     this.authService.registerEmpleado(empleadoParaEnviar).subscribe({

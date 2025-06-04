@@ -1,12 +1,26 @@
 <div class="container mt-4">
   <h2 class="mb-4">Mi Calendario y Disponibilidad</h2>
 
-  <div class="row mb-4">
+  <!-- Selector de empleado (solo visible para admin) -->
+  <div class="row mb-3" *ngIf="isAdmin()">
     <div class="col-md-6">
+      <label for="empleadoSelect" class="form-label">Seleccionar Empleado:</label>
+      <select id="empleadoSelect" class="form-select"
+              [ngModel]="selectedEmpleadoId"
+              (ngModelChange)="onEmpleadoChange({ target: { value: $event } })">
+        <option [ngValue]="null">-- Selecciona un Empleado --</option>
+        <option *ngFor="let emp of empleados" [ngValue]="emp.id">{{ emp.nombre }}</option>
+      </select>
+    </div>
+  </div>
+
+
+  <div class="row mb-4">
+    <div class="col-md-6"> <!-- Cambiado a onDateChange -->
       <label for="fechaGestion" class="form-label">Selecciona Fecha:</label>
-      <input type="date" id="fechaGestion" class="form-control" 
-             [(ngModel)]="fechaSeleccionada" 
-             (ngModelChange)="cargarTramosParaEmpleado()"
+      <input type="date" id="fechaGestion" class="form-control"
+             [(ngModel)]="fechaSeleccionada"
+             (ngModelChange)="onDateChange($event)"
              [min]="minDate">
     </div>
   </div>
@@ -19,11 +33,12 @@
 
   <div *ngIf="mensaje" class="alert alert-info my-3">{{ mensaje }}</div>
 
-  <div *ngIf="!isLoading && fechaSeleccionada && currentUser">
+  <!-- Mostrar tramos solo si no está cargando, hay fecha seleccionada Y hay un empleado seleccionado -->
+  <div *ngIf="!isLoading && fechaSeleccionada && selectedEmpleadoId !== null">
     <h4 class="mb-3">Horarios para el <mark>{{ fechaSeleccionada | date:'dd/MM/yyyy' }}</mark></h4>
     <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-2">
-      <div class="col" *ngFor="let tramo of tramosDelDiaParaVista">
-        <div class="card h-100 text-center" 
+      <div class="col" *ngFor="let tramo of tramos">
+        <div class="card h-100 text-center"
              [ngClass]="{
                'border-success': tramo.estado === 'disponible',
                'border-danger': tramo.estado === 'reservadoCliente',
@@ -64,7 +79,10 @@
       </div>
     </div>
   </div>
-  <div *ngIf="!isLoading && (!fechaSeleccionada || !currentUser)" class="alert alert-secondary">
-    Por favor, selecciona una fecha para ver y gestionar los horarios.
+  <!-- Mensaje si no hay empleado seleccionado (para admin) o falta fecha -->
+  <div *ngIf="!isLoading && (!fechaSeleccionada || selectedEmpleadoId === null)" class="alert alert-secondary">
+     <span *ngIf="isAdmin() && selectedEmpleadoId === null">Por favor, selecciona un empleado y una fecha para ver y gestionar los horarios.</span>
+     <span *ngIf="!isAdmin() && !fechaSeleccionada">Por favor, selecciona una fecha para ver y gestionar los horarios.</span>
+     <span *ngIf="isAdmin() && selectedEmpleadoId !== null && !fechaSeleccionada">Por favor, selecciona una fecha para ver y gestionar los horarios del empleado seleccionado.</span>
   </div>
 </div>

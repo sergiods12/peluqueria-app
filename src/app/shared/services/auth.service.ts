@@ -1,6 +1,6 @@
 // src/app/shared/services/auth.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpResponse, HttpErrorResponse } from '@angular/common/http'; // <-- HttpErrorResponse añadido aquí
 import { BehaviorSubject, Observable, tap, catchError, EMPTY, map } from 'rxjs';
 import { Cliente } from '../models/cliente.model';
 import { Empleado } from '../models/empleado.model';
@@ -27,7 +27,7 @@ export class AuthService {
   public redirectUrl: string | null = null;
 
   constructor(private http: HttpClient, private router: Router) {
-    console.log('AuthService: Instanciado. Usando backendUrl:', this.backendUrl);
+    console.log('AuthService: Instanciado. Usando backendUrl:', this.backendUrl, 'con apiPrefix:', this.apiPrefix);
   }
 
   private getUserFromStorage(): AuthUser | null {
@@ -73,10 +73,18 @@ export class AuthService {
       map((response: HttpResponse<string>) => {
         console.log("AuthService: Respuesta completa recibida del POST a /login:", response);
         if (response.status === 200) {
-          console.log("AuthService: Login HTTP 200 OK. Cuerpo:", response.body, "Llamando a fetchUserDetailsAndNavigate.");
+          // Si el backend está configurado para AJAX, el cuerpo no debería ser HTML.
+          // Si aún devuelve HTML aquí, es un problema del backend.
+          if (response.body && response.body.trim().startsWith('<!DOCTYPE html>')) {
+             console.warn("AuthService: Login HTTP 200 OK, pero el cuerpo es HTML. El backend debería devolver una respuesta vacía o JSON para AJAX.");
+             // A pesar del HTML, si la cookie de sesión se establece, fetchUserDetailsAndNavigate podría funcionar.
+          } else {
+            console.log("AuthService: Login HTTP 200 OK. Cuerpo:", response.body);
+          }
           this.fetchUserDetailsAndNavigate();
         } else {
-          console.error("AuthService: Respuesta inesperada de /login:", response);
+          // Esto no debería ocurrir si el backend devuelve 401 directamente en caso de fallo.
+          console.error("AuthService: Respuesta inesperada de /login (no 200 ni error HTTP):", response);
           let errorMessage = `Login falló con estado: ${response.status}.`;
            if (response.body) {
               try {
@@ -93,7 +101,25 @@ export class AuthService {
       }),
       catchError(err => {
         this.setUserInStorage(null);
-        const message = (err instanceof Error) ? err.message : (err.error?.message || err.message || 'Error de autenticación o conexión.');
+        let message = 'Error de autenticación o conexión.';
+        if (err instanceof HttpErrorResponse) {
+            // El backend devolvió un error HTTP (ej: 401)
+            message = `Error ${err.status}: Credenciales incorrectas o usuario no autorizado.`;
+            if (err.error && typeof err.error === 'string') {
+                try {
+                    const errorBody = JSON.parse(err.error);
+                    message = errorBody.message || errorBody.error || message;
+                } catch (e) {
+                    // Si el error no es JSON, usar el texto si es corto
+                    if (err.error.length < 200) message = err.error;
+                }
+            } else if (err.error?.message) {
+                message = err.error.message;
+            }
+        } else if (err instanceof Error) {
+            message = err.message;
+        }
+        console.error('AuthService: Error en la tubería de login:', err);
         throw new Error(message);
       })
     );
@@ -106,7 +132,6 @@ export class AuthService {
       next: (user) => {
         console.log("AuthService: Detalles del usuario recibidos de /api/auth/me:", user);
         if (user && user.id != null && user.email && user.rol && user.nombre) {
-          // Asegurarse que el rol sea uno de los esperados por AuthUser
           if (!['CLIENTE', 'EMPLEADO', 'ADMIN'].includes(user.rol)) {
             console.error("AuthService: Rol de usuario inválido recibido de /api/auth/me:", user.rol);
             this.setUserInStorage(null);
@@ -135,8 +160,17 @@ export class AuthService {
     const logoutUrl = `${this.backendUrl}/logout`;
     console.log(`AuthService: Iniciando logout a ${logoutUrl}...`);
     return this.http.post(logoutUrl, {}, { observe: 'response', responseType: 'text', withCredentials: true }).pipe(
-      tap(() => { this.setUserInStorage(null); this.router.navigate(['/auth/login']); }),
-      catchError(() => { this.setUserInStorage(null); this.router.navigate(['/auth/login']); return EMPTY; })
+      tap(() => {
+        console.log('AuthService: Logout HTTP exitoso o con error manejado. Limpiando estado local.');
+        this.setUserInStorage(null);
+        this.router.navigate(['/auth/login']);
+      }),
+      catchError((err) => {
+        console.error('AuthService: Error durante el logout HTTP. Limpiando estado local de todas formas.', err);
+        this.setUserInStorage(null);
+        this.router.navigate(['/auth/login']);
+        return EMPTY;
+      })
     );
   }
 
@@ -156,7 +190,7 @@ export class AuthService {
     const user = this.getCurrentUser();
     if (!user) return false;
     if (role === 'ADMIN') return user.rol === 'ADMIN';
-    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN'; // Un ADMIN también es un EMPLEADO en términos de acceso a rutas de empleado
+    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
     return user.rol === role;
   }
   isAdmin = () => this.hasRole('ADMIN');

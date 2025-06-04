@@ -13,9 +13,9 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptorsFromDi(),
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
-      withFetch() // Añade withFetch() aquí
+      withFetch()
     ),
-    provideClientHydration(withEventReplay()),
-    DatePipe // Provide DatePipe globally if needed by multiple standalone components, or import in components
+    provideClientHydration(withEventReplay()), // provideClientHydration es para el cliente
+    DatePipe
   ]
 };
