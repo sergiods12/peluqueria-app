@@ -11,6 +11,7 @@ import { ReservarCitaComponent } from './cliente/reservar-cita/reservar-cita.com
 import { CancelarReservaClienteComponent } from './cliente/cancelar-reserva-cliente/cancelar-reserva-cliente.component';
 import { GestionCalendarioComponent } from './empleado/gestion-calendario/gestion-calendario.component';
 import { CrearPeluqueriaComponent } from './empleado/crear-peluqueria/crear-peluqueria.component';
+import { CrearEmpleadoComponent } from './empleado/crear-empleado/crear-empleado.component'; // Asegúrate de que esta importación existe
 
 // DO NOT add "import { routes } from './app.routes';" in this file.
 export const routes: Routes = [
@@ -43,8 +44,13 @@ export const routes: Routes = [
       {
         path: 'crear-peluqueria',
         component: CrearPeluqueriaComponent,
-        canActivate: [roleGuard], // Solo roleGuard aquí, authGuard ya está en el padre
-        data: { roles: ['ADMIN'] }
+        canActivate: [roleGuard], // authGuard ya está en el padre, roleGuard verifica roles específicos
+        data: { roles: ['EMPLEADO', 'ADMIN'] }
+      },
+      {
+        path: 'crear-empleado', // Nueva ruta para crear empleado
+        component: CrearEmpleadoComponent
+        // Las guardas canActivate y data.roles del padre ('/empleado') ya protegen esta ruta.
       },
       { path: '', redirectTo: 'calendario', pathMatch: 'full' }
     ]

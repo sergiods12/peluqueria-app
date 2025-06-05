@@ -5,35 +5,52 @@
     <div class="row g-3">
       <div class="col-md-4">
         <label for="peluqueria" class="form-label">Peluquería:</label>
-        <select id="peluqueria" formControlName="peluqueria" class="form-select">
-          <option [ngValue]="null" disabled>-- Seleccione Peluquería --</option>
+        <select id="peluqueria" formControlName="peluqueria" class="form-select" [attr.disabled]="isLoadingPeluquerias ? true : null">
+          <option [ngValue]="null" disabled>
+            {{ isLoadingPeluquerias ? 'Cargando peluquerías...' : '-- Seleccione Peluquería --' }}
+          </option>
           <option *ngFor="let p of peluquerias" [ngValue]="p.id">{{ p.nombre }}</option>
         </select>
+        <div *ngIf="reservaForm.get('peluqueria')?.invalid && reservaForm.get('peluqueria')?.touched" class="text-danger small mt-1">
+          Debe seleccionar una peluquería.
+        </div>
       </div>
 
       <div class="col-md-4">
         <label for="empleado" class="form-label">Peluquero/a:</label>
         <select id="empleado" formControlName="empleado" class="form-select">
-          <option [ngValue]="null" disabled>-- Seleccione Peluquero/a --</option>
+          <option [ngValue]="null" disabled>
+            {{ isLoadingEmpleados ? 'Cargando peluqueros...' : (reservaForm.get('peluqueria')?.value ? (empleadosPeluqueria.length > 0 ? '-- Seleccione Peluquero/a --' : 'No hay peluqueros disponibles') : 'Seleccione peluquería primero') }}
+          </option>
           <option *ngFor="let e of empleadosPeluqueria" [ngValue]="e.id">{{ e.nombre }} ({{ e.rol }})</option>
         </select>
+        <div *ngIf="reservaForm.get('empleado')?.invalid && reservaForm.get('empleado')?.touched" class="text-danger small mt-1">
+          Debe seleccionar un peluquero/a.
+        </div>
       </div>
 
       <div class="col-md-4">
         <label for="servicio" class="form-label">Tipo de Servicio:</label>
         <select id="servicio" formControlName="servicio" class="form-select">
-          <option [ngValue]="null" disabled>-- Seleccione Servicio --</option>
+          <option [ngValue]="null" disabled>
+            {{ isLoadingServicios ? 'Cargando servicios...' : (reservaForm.get('empleado')?.value ? (servicios.length > 0 ? '-- Seleccione Servicio --' : 'No hay servicios disponibles') : 'Seleccione peluquero/a primero') }}
+          </option>
           <option *ngFor="let s of servicios" [ngValue]="s.id">{{ s.nombre }} ({{ s.numTramos * 30 }} min)</option>
         </select>
+        <div *ngIf="reservaForm.get('servicio')?.invalid && reservaForm.get('servicio')?.touched" class="text-danger small mt-1">
+          Debe seleccionar un servicio.
+        </div>
       </div>
     </div>
     <div class="row g-3 mt-1">
         <div class="col-md-4">
             <label for="fechaCita" class="form-label">Fecha de la Cita:</label>
             <input type="date" id="fechaCita" class="form-control"
-                   formControlName="fechaCita"
-                   [min]="minDate"
-                   [disabled]="!reservaForm.get('peluqueria')?.value || !reservaForm.get('empleado')?.value || !reservaForm.get('servicio')?.value">
+                   formControlName="fechaCita" [min]="minDate"
+                   [attr.disabled]="reservaForm.get('fechaCita')?.disabled ? true : null">
+            <div *ngIf="reservaForm.get('fechaCita')?.invalid && reservaForm.get('fechaCita')?.touched" class="text-danger small mt-1">
+              Debe seleccionar una fecha.
+            </div>
           </div>
     </div>
   </form>

@@ -10,6 +10,9 @@ import { ReservarCitaComponent } from './cliente/reservar-cita/reservar-cita.com
 import { CancelarReservaClienteComponent } from './cliente/cancelar-reserva-cliente/cancelar-reserva-cliente.component';
 import { GestionCalendarioComponent } from './empleado/gestion-calendario/gestion-calendario.component';
 import { CrearPeluqueriaComponent } from './empleado/crear-peluqueria/crear-peluqueria.component';
+import { CrearEmpleadoComponent } from './empleado/crear-empleado/crear-empleado.component'; // Ensure this import exists
+
+
 
 export const routes: Routes = [
   { path: 'auth/login', component: LoginComponent },
@@ -43,6 +46,12 @@ export const routes: Routes = [
         component: CrearPeluqueriaComponent,
         canActivate: [roleGuard], // Use implemented guards
         data: { roles: ['ADMIN'] }
+      },
+      {
+        path: 'crear-empleado', // Ruta para crear empleado
+        component: CrearEmpleadoComponent
+        // Las guardas canActivate y data.roles del padre ('/empleado') ya protegen esta ruta.
+        // Se puede añadir explícitamente si se desea mayor granularidad.
       },
       { path: '', redirectTo: 'calendario', pathMatch: 'full' }
     ]

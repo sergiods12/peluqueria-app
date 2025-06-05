@@ -4,7 +4,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { HttpClientModule } from '@angular/common/http';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
-import { AppRoutingModule } from './app-routing.module'; // Provides RouterModule
+//import { AppRoutingModule } from './app-routing.module'; // Provides RouterModule
 import { AppComponent } from './app.component';
 
 // Import your feature modules or declare components directly if not using feature modules for these
@@ -46,7 +46,7 @@ import { SharedModule } from './shared/shared.module'; // <-- Import SharedModul
   ],
   imports: [
     BrowserModule,
-    AppRoutingModule,     // <-- Imports AppRoutingModule (which exports RouterModule)
+    //AppRoutingModule,     // <-- Imports AppRoutingModule (which exports RouterModule)
     HttpClientModule,
     ReactiveFormsModule,
     FormsModule,

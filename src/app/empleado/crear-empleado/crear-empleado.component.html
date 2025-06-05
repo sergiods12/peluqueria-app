@@ -1,0 +1,103 @@
+<div class="container mt-4">
+  <h2>Crear Empleado</h2>
+  <hr>
+
+  <form [formGroup]="crearEmpleadoForm" (ngSubmit)="onSubmit()">
+    <!-- Nombre -->
+    <div class="mb-3">
+      <label for="nombre" class="form-label">Nombre Completo</label>
+      <input type="text" id="nombre" formControlName="nombre" class="form-control"
+             [ngClass]="{ 'is-invalid': crearEmpleadoForm.get('nombre')?.invalid && crearEmpleadoForm.get('nombre')?.touched }">
+      <div *ngIf="crearEmpleadoForm.get('nombre')?.invalid && crearEmpleadoForm.get('nombre')?.touched" class="invalid-feedback">
+        El nombre es requerido.
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" id="email" formControlName="email" class="form-control"
+             [ngClass]="{ 'is-invalid': crearEmpleadoForm.get('email')?.invalid && crearEmpleadoForm.get('email')?.touched }">
+      <div *ngIf="crearEmpleadoForm.get('email')?.invalid && crearEmpleadoForm.get('email')?.touched" class="invalid-feedback">
+        <span *ngIf="crearEmpleadoForm.get('email')?.errors?.['required']">El email es requerido.</span>
+        <span *ngIf="crearEmpleadoForm.get('email')?.errors?.['email']">El email no es válido.</span>
+      </div>
+    </div>
+
+    <!-- Password -->
+    <div class="mb-3">
+      <label for="password" class="form-label">Contraseña</label>
+      <input type="password" id="password" formControlName="password" class="form-control"
+             [ngClass]="{ 'is-invalid': crearEmpleadoForm.get('password')?.invalid && crearEmpleadoForm.get('password')?.touched }">
+      <div *ngIf="crearEmpleadoForm.get('password')?.invalid && crearEmpleadoForm.get('password')?.touched" class="invalid-feedback">
+        <span *ngIf="crearEmpleadoForm.get('password')?.errors?.['required']">La contraseña es requerida.</span>
+        <span *ngIf="crearEmpleadoForm.get('password')?.errors?.['minlength']">La contraseña debe tener al menos 6 caracteres.</span>
+      </div>
+    </div>
+
+    <!-- DNI -->
+    <div class="mb-3">
+      <label for="dni" class="form-label">DNI</label>
+      <input type="text" id="dni" formControlName="dni" class="form-control"
+             [ngClass]="{ 'is-invalid': crearEmpleadoForm.get('dni')?.invalid && crearEmpleadoForm.get('dni')?.touched }">
+      <div *ngIf="crearEmpleadoForm.get('dni')?.invalid && crearEmpleadoForm.get('dni')?.touched" class="invalid-feedback">
+        El DNI es requerido.
+      </div>
+    </div>
+
+    <!-- Teléfono -->
+    <div class="mb-3">
+      <label for="telefono" class="form-label">Teléfono (Opcional)</label>
+      <input type="text" id="telefono" formControlName="telefono" class="form-control">
+    </div>
+
+    <!-- Peluquería -->
+    <div class="form-group mb-3">
+      <label for="peluqueriaId" class="form-label">Peluquería Asignada:</label>
+      <select id="peluqueriaId" formControlName="peluqueriaId" class="form-select"
+              [ngClass]="{ 'is-invalid': crearEmpleadoForm.get('peluqueriaId')?.invalid && crearEmpleadoForm.get('peluqueriaId')?.touched }">
+        <option [ngValue]="null" disabled selected>Selecciona una peluquería</option>
+        <option *ngFor="let peluqueria of peluquerias" [ngValue]="peluqueria.id">
+          {{ peluqueria.nombre }}
+        </option>
+      </select>
+      <div *ngIf="crearEmpleadoForm.get('peluqueriaId')?.invalid && (crearEmpleadoForm.get('peluqueriaId')?.dirty || crearEmpleadoForm.get('peluqueriaId')?.touched)"
+           class="invalid-feedback">
+        <div *ngIf="crearEmpleadoForm.get('peluqueriaId')?.errors?.['required']">
+          La peluquería es requerida.
+        </div>
+      </div>
+    </div>
+    <!-- Rol de Especialización (Mujer, Hombre, Ambos) -->
+    <div class="mb-3">
+      <label for="rol" class="form-label">Especialización del Empleado (Rol)</label>
+      <select id="rol" formControlName="rol" class="form-select"
+              [ngClass]="{ 'is-invalid': crearEmpleadoForm.get('rol')?.invalid && crearEmpleadoForm.get('rol')?.touched }">
+        <option [ngValue]="null" disabled>Selecciona especialización</option>
+        <option *ngFor="let r of rolesEspecializacion" [value]="r">{{ r }}</option>
+      </select>
+      <div *ngIf="crearEmpleadoForm.get('rol')?.invalid && crearEmpleadoForm.get('rol')?.touched" class="invalid-feedback">
+        Debes seleccionar una especialización.
+      </div>
+    </div>
+
+    <!-- isAdmin (Administrador de la peluquería vs Peluquero normal) -->
+    <div class="mb-3 form-check">
+      <input type="checkbox" id="isAdmin" formControlName="isAdmin" class="form-check-input">
+      <label for="isAdmin" class="form-check-label">¿Es administrador de la peluquería?</label>
+      <small class="form-text text-muted d-block">Marcar si este empleado gestionará la peluquería (ej. un ADMIN de peluquería), no si es un administrador general del sistema.</small>
+    </div>
+
+    <!-- Mensajes de Error/Éxito -->
+    <div *ngIf="errorMessage" class="alert alert-danger mt-3 animate__animated animate__fadeIn">
+      {{ errorMessage }}
+    </div>
+    <div *ngIf="successMessage" class="alert alert-success mt-3 animate__animated animate__fadeIn">
+      {{ successMessage }}
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3" [disabled]="crearEmpleadoForm.invalid">
+      <i class="fas fa-plus-circle me-2"></i>Crear Empleado
+    </button>
+  </form>
+</div>

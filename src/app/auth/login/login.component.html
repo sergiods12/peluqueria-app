@@ -24,12 +24,6 @@
             </div>
           </div>
 
-          <!-- Nueva opción para iniciar sesión como empleado -->
-          <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" id="isEmpleado" formControlName="isEmpleado">
-            <label class="form-check-label" for="isEmpleado">Iniciar sesión como empleado</label>
-          </div>
-
           <div class="d-grid">
             <button type="submit" class="btn btn-primary" [disabled]="loginForm.invalid">Iniciar Sesión</button>
           </div>
@@ -38,8 +32,7 @@
         <hr class="my-4">
         <p class="text-center">¿No tienes cuenta?</p>
         <div class="d-grid gap-2">
-            <a class="btn btn-outline-secondary" routerLink="/auth/register-cliente">Crear Cuenta Cliente</a>
-            <a class="btn btn-outline-info mt-2" routerLink="/auth/register-empleado">Registrar Nuevo Empleado</a>
+            <a class="btn btn-outline-secondary" routerLink="/auth/register-cliente">Crear Nuevo Cliente</a>
             </div>
       </div>
     </div>

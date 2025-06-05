@@ -1,23 +1,21 @@
-import { Injectable } from '@angular/core';
+// En tu empleado.service.ts
 import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Empleado } from '../models/empleado.model';
-import { environment } from '../../../environments/environment';
+import { Empleado } from '../models/empleado.model'; // Ajusta la ruta
 
 @Injectable({
   providedIn: 'root'
 })
 export class EmpleadoService {
-  private apiUrl = `${environment.apiUrl}${environment.apiPrefix}/empleados`;
+  private apiUrl = 'http://localhost:8901/api/empleados'; // O tu URL base de API
 
   constructor(private http: HttpClient) { }
 
-  getEmpleadosByPeluqueria(peluqueriaId: number): Observable<Empleado[]> {
-    return this.http.get<Empleado[]>(`${environment.apiUrl}${environment.apiPrefix}/peluquerias/${peluqueriaId}/empleados`);
-  }
+  // ... otros métodos ...
 
-  // Other methods if needed by RegisterEmpleado or other components
-  getEmpleadoById(id: number): Observable<Empleado> {
-    return this.http.get<Empleado>(`${this.apiUrl}/${id}`);
+  getEmpleadosPorPeluqueria(peluqueriaId: number): Observable<Empleado[]> {
+    return this.http.get<Empleado[]>(`${this.apiUrl}/peluqueria/${peluqueriaId}`);
+    // La URL exacta '/peluqueria/${peluqueriaId}' dependerá de cómo tengas configurado tu backend.
   }
 }
