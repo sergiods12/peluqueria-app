@@ -4,14 +4,21 @@ import { CommonModule, DatePipe } from '@angular/common'; // CommonModule para *
 import { RouterModule } from '@angular/router'; // Si usas routerLink
 import { Tramo } from '../../shared/models/tramo.model';
 import { TramoService } from '../../shared/services/tramo.service';
-import { AuthService, AuthUser } from '../../shared/services/auth.service';
+import { AuthService, AuthUser } from '../../shared/services/auth.service'; // Asegúrate que AuthUser esté exportado
 
 @Component({
   selector: 'app-cancelar-reserva-cliente',
   standalone: true,
+<<<<<<< HEAD
   imports: [CommonModule, RouterModule], // DatePipe está disponible a través de CommonModule
   templateUrl: './cancelar-reserva-cliente.component.html',
   styleUrls: ['./cancelar-reserva-cliente.component.scss'] // O .css, o elimina si no tienes estilos
+=======
+  imports: [CommonModule], // CommonModule provides *ngIf, *ngFor, DatePipe
+  providers: [DatePipe], // <--- Añadir DatePipe a los providers
+  templateUrl: './cancelar-reserva-cliente.component.html',
+  // styleUrls: ['./cancelar-reserva-cliente.component.css'] // Descomenta si tienes este archivo
+>>>>>>> afa1cd9 (antes de mis reservas mostrar)
 })
 export class CancelarReservaClienteComponent implements OnInit {
   misReservas: Tramo[] = [];
@@ -27,11 +34,17 @@ export class CancelarReservaClienteComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    // Usar getCurrentUser() si tu AuthService lo proporciona de forma síncrona
+    // Si es un Observable, deberías suscribirte como en versiones anteriores
     this.currentUser = this.authService.getCurrentUser();
     if (this.currentUser && this.currentUser.id) {
       this.cargarMisReservas();
     } else {
+<<<<<<< HEAD
         this.mensajeError = "No se pudo identificar al cliente. Por favor, inicie sesión.";
+=======
+      this.mensajeError = "No se pudo identificar al cliente. Por favor, inicie sesión.";
+>>>>>>> afa1cd9 (antes de mis reservas mostrar)
     }
   }
 
@@ -46,6 +59,7 @@ export class CancelarReservaClienteComponent implements OnInit {
 
     this.tramoService.getReservasByClienteId(this.currentUser.id).subscribe({
       next: (tramos) => {
+<<<<<<< HEAD
         // El backend ya debería devolver solo las activas y ordenadas.
         // Si necesitas filtrar más (ej. solo futuras), puedes hacerlo aquí.
         const hoy = new Date();
@@ -66,7 +80,15 @@ export class CancelarReservaClienteComponent implements OnInit {
         } else {
             this.mensaje = null;
         }
+=======
+        const hoy = new Date().toISOString().split('T')[0];
+        // Filtrar por fecha futura o igual a hoy, que tenga citaId, y que el cliente de la cita coincida con el usuario actual
+        this.misReservas = tramos
+          .filter(t => t.fecha >= hoy && t.citaId && t.cliente?.id === this.currentUser?.id)
+          .sort((a,b) => new Date(a.fecha + 'T' + a.horaInicio).getTime() - new Date(b.fecha + 'T' + b.horaInicio).getTime()); // Ordenar por fecha y hora de inicio
+>>>>>>> afa1cd9 (antes de mis reservas mostrar)
         this.isLoading = false;
+        // No establecer mensaje si la lista está vacía aquí, el HTML lo maneja
       },
       error: (err) => {
         this.mensajeError = 'Error al cargar tus reservas: ' + (err.error?.message || err.message);
@@ -78,6 +100,7 @@ export class CancelarReservaClienteComponent implements OnInit {
   
   mensaje: string | null = null; // Para mensajes como "No tienes reservas"
 
+<<<<<<< HEAD
   confirmarCancelacion(tramo: Tramo): void {
     if (!tramo.id) {
       this.mensajeError = "No se puede cancelar una reserva sin ID.";
@@ -116,3 +139,32 @@ export class CancelarReservaClienteComponent implements OnInit {
     });
   }
 }
+=======
+  cancelarReserva(tramo: Tramo): void {
+    if (!tramo.id) {
+      this.mensajeError = 'Error: No se puede cancelar una reserva sin ID.';
+      return;
+    }
+    // Usar la instancia de DatePipe para formatear la fecha
+    const fechaFormateada = this.datePipe.transform(tramo.fecha, 'dd/MM/yyyy', 'es-ES');
+    if (confirm(`¿Estás seguro de cancelar tu reserva para "${tramo.servicio?.nombre || 'el servicio'}" el ${fechaFormateada} a las ${tramo.horaInicio}?`)) {
+      this.isLoading = true;
+      this.mensajeError = null;
+      this.mensajeExito = null;
+      this.tramoService.cancelarReserva(tramo.id).subscribe({
+        next: () => {
+          this.mensajeExito = 'Reserva cancelada con éxito.';
+          // Recargar la lista de reservas después de una cancelación exitosa
+          this.cargarMisReservas();
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.mensajeError = 'Error al cancelar la reserva: ' + (err.error?.message || err.message);
+          console.error(err);
+          this.isLoading = false;
+        }
+      });
+    }
+  }
+}
+>>>>>>> afa1cd9 (antes de mis reservas mostrar)

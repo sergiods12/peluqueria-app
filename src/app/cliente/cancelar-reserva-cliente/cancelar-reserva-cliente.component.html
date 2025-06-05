@@ -1,5 +1,10 @@
+<!-- c:\Users\Sergi\peluqueria-app\src\app\cliente\cancelar-reserva-cliente\cancelar-reserva-cliente.component.html -->
 <div class="container mt-4">
+<<<<<<< HEAD
   <h2 class="mb-4">Mis Reservas Activas</h2>
+=======
+  <h2 class="mb-3">Mis Próximas Reservas</h2>
+>>>>>>> afa1cd9 (antes de mis reservas mostrar)
 
   <div *ngIf="isLoading" class="text-center my-5">
     <div class="spinner-border text-primary" role="status">
@@ -8,6 +13,7 @@
     <p class="mt-2">Cargando tus reservas...</p>
   </div>
 
+<<<<<<< HEAD
   <div *ngIf="!isLoading && mensajeExito" class="alert alert-success" role="alert">
     {{ mensajeExito }}
   </div>
@@ -34,6 +40,35 @@
             <i class="fas fa-cut me-2"></i> {{ reserva.servicio?.nombre || 'Servicio no especificado' }}
           </h5>
           <small class="text-muted">{{ reserva.fecha | date:'fullDate':'':'es-ES' }}</small>
+=======
+  <!-- Mensajes de éxito y error -->
+  <div *ngIf="!isLoading && mensajeExito" class="alert alert-success my-3">{{ mensajeExito }}</div>
+  <div *ngIf="!isLoading && mensajeError" class="alert alert-danger my-3">{{ mensajeError }}</div>
+
+  <!-- Mensaje si no hay reservas activas y no hay un mensaje de error -->
+  <div *ngIf="!isLoading && misReservas.length === 0 && !mensajeError && currentUser?.id" class="alert alert-info my-3">
+    No tienes reservas futuras activas.
+  </div>
+
+  <!-- Lista de reservas activas -->
+  <div *ngIf="!isLoading && misReservas.length > 0" class="list-group shadow-sm">
+    <div *ngFor="let reserva of misReservas" class="list-group-item list-group-item-action flex-column align-items-start mb-2">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">{{ reserva.servicio?.nombre || 'Servicio no especificado' }}</h5>
+        <small class="text-muted">{{ reserva.fecha | date:'fullDate' }}</small>
+      </div>
+      <p class="mb-1">
+        <strong>Hora:</strong> {{ reserva.horaInicio }} - {{ reserva.horaFin }} <br>
+        <strong>Peluquero:</strong> {{ reserva.empleado?.nombre || 'No asignado' }} <br>
+        <strong>Peluquería:</strong> {{ reserva.empleado?.peluqueria?.nombre || 'No especificada' }}
+      </p>
+      <!-- Corregido: Usar encadenamiento opcional o verificar existencia si es necesario -->
+      <small *ngIf="reserva.servicio && reserva.servicio.precio != null">Precio: {{ reserva.servicio.precio | currency:'EUR' }}</small>
+      <div class="mt-2">
+        <button class="btn btn-outline-danger btn-sm" (click)="cancelarReserva(reserva)">
+          <i class="bi bi-x-circle"></i> Cancelar Reserva
+        </button>
+>>>>>>> afa1cd9 (antes de mis reservas mostrar)
         </div>
         <p class="mb-1">
           <i class="fas fa-clock me-2"></i>
@@ -57,4 +92,14 @@
       </div>
     </div>
   </div>
+<<<<<<< HEAD
 </div>
+=======
+
+  <!-- Mensaje si el usuario no está logueado -->
+  <div *ngIf="!isLoading && !currentUser?.id && !mensajeError" class="alert alert-warning my-3">
+    Por favor, inicie sesión para ver y cancelar sus reservas.
+  </div>
+
+</div>
+>>>>>>> afa1cd9 (antes de mis reservas mostrar)
