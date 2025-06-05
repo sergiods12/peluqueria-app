@@ -1,24 +1,25 @@
-// c:\Users\Sergi\peluqueria-app\src\app\app.config.ts
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+// src/app/app.config.ts
+import { ApplicationConfig, LOCALE_ID, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, withXsrfConfiguration, withFetch } from '@angular/common/http';
-import { routes } from './app.routes'; // Correct import
+import { provideHttpClient, withInterceptorsFromDi, withXsrfConfiguration } from '@angular/common/http';
+import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
-import { DatePipe } from '@angular/common'; // Import DatePipe
-import { AuthInterceptor } from './auth.interceptor'; // Import AuthInterceptor
+import { DatePipe, registerLocaleData } from '@angular/common'; // Importar registerLocaleData
+import localeEs from '@angular/common/locales/es'; // Importar el locale español
+
+// Registrar los datos de localización para español
+registerLocaleData(localeEs, 'es-ES');
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(
-      withInterceptorsFromDi(), // Allows HttpClient to use DI-provided interceptors
-      withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
-      withFetch()
+      withInterceptorsFromDi(),
+      withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' })
     ),
-    // Your AuthInterceptor is correctly registered here
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     provideClientHydration(withEventReplay()),
-    DatePipe
+    DatePipe, // DatePipe ya estaba, está bien
+    { provide: LOCALE_ID, useValue: 'es-ES' } // Establecer 'es-ES' como el LOCALE_ID por defecto
   ]
 };

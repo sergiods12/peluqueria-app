@@ -4,15 +4,15 @@ import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/comm
 import { BehaviorSubject, Observable, tap, catchError, EMPTY, map } from 'rxjs';
 import { Cliente } from '../models/cliente.model';
 import { Empleado } from '../models/empleado.model';
-import { environment } from '../../../environments/environment'; // Asegúrate que esta ruta es correcta
+import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
 
 export interface AuthUser {
   id: number;
   nombre: string;
   email: string;
-  rol: 'CLIENTE' | 'EMPLEADO' | 'ADMIN'; // Rol del sistema
-  isAdmin?: boolean; // Opcional, ya que el rol ADMIN lo implica
+  rol: 'CLIENTE' | 'EMPLEADO' | 'ADMIN';
+  isAdmin?: boolean;
 }
 
 @Injectable({
@@ -21,7 +21,6 @@ export interface AuthUser {
 export class AuthService {
   private backendUrl = environment.apiUrl;
   private apiPrefix = environment.apiPrefix;
-
   private currentUserSubject = new BehaviorSubject<AuthUser | null>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();
   public redirectUrl: string | null = null;
@@ -33,28 +32,16 @@ export class AuthService {
   private getUserFromStorage(): AuthUser | null {
     if (typeof localStorage !== 'undefined') {
       const userJson = localStorage.getItem('currentUser');
-      if (userJson) {
-        try {
-          return JSON.parse(userJson);
-        } catch (e) {
-          console.error('AuthService: Error al parsear currentUser de localStorage', e);
-          localStorage.removeItem('currentUser');
-          return null;
-        }
-      }
+      if (userJson) { try { return JSON.parse(userJson); } catch (e) { localStorage.removeItem('currentUser'); return null; } }
     }
     return null;
   }
 
   private setUserInStorage(user: AuthUser | null) {
     if (typeof localStorage !== 'undefined') {
-      if (user) {
-        localStorage.setItem('currentUser', JSON.stringify(user));
-      } else {
-        localStorage.removeItem('currentUser');
-      }
+      if (user) localStorage.setItem('currentUser', JSON.stringify(user));
+      else localStorage.removeItem('currentUser');
     }
-    console.log('AuthService: setUserInStorage actualizando currentUserSubject con:', user);
     this.currentUserSubject.next(user);
   }
 
@@ -63,31 +50,14 @@ export class AuthService {
     console.log(`AuthService: Iniciando POST a ${loginUrl} para email:`, email);
     const headers = new HttpHeaders().set('Content-Type', 'application/x-www-form-urlencoded');
     const body = new HttpParams().set('username', email).set('password', password);
-
-    return this.http.post(loginUrl, body.toString(), {
-      headers: headers,
-      observe: 'response',
-      responseType: 'text',
-      withCredentials: true
-    }).pipe(
+    return this.http.post(loginUrl, body.toString(), { headers, observe: 'response', responseType: 'text', withCredentials: true }).pipe(
       map((response: HttpResponse<string>) => {
         console.log("AuthService: Respuesta completa recibida del POST a /login:", response);
         if (response.status === 200) {
-          console.log("AuthService: Login HTTP 200 OK. Cuerpo:", response.body, "Llamando a fetchUserDetailsAndNavigate.");
           this.fetchUserDetailsAndNavigate();
         } else {
-          console.error("AuthService: Respuesta inesperada de /login:", response);
           let errorMessage = `Login falló con estado: ${response.status}.`;
-           if (response.body) {
-              try {
-                  const errorBody = JSON.parse(response.body);
-                  errorMessage = errorBody.message || errorBody.error || errorMessage;
-              } catch (e) {
-                  if (response.body.length > 0 && response.body.length < 200) {
-                    errorMessage = response.body;
-                  }
-              }
-          }
+          if (response.body) { try { const eb = JSON.parse(response.body); errorMessage = eb.message || eb.error || errorMessage; } catch (e) { if (response.body.length > 0 && response.body.length < 200) errorMessage = response.body;}}
           throw new Error(errorMessage);
         }
       }),
@@ -101,39 +71,22 @@ export class AuthService {
 
   fetchUserDetailsAndNavigate() {
     const userDetailsUrl = `${this.backendUrl}${this.apiPrefix}/auth/me`;
-    console.log(`AuthService: Iniciando fetchUserDetailsAndNavigate para ${userDetailsUrl}...`);
     this.http.get<AuthUser>(userDetailsUrl, { withCredentials: true }).subscribe({
       next: (user) => {
-        console.log("AuthService: Detalles del usuario recibidos de /api/auth/me:", user);
         if (user && user.id != null && user.email && user.rol && user.nombre) {
-          // Asegurarse que el rol sea uno de los esperados por AuthUser
-          if (!['CLIENTE', 'EMPLEADO', 'ADMIN'].includes(user.rol)) {
-            console.error("AuthService: Rol de usuario inválido recibido de /api/auth/me:", user.rol);
-            this.setUserInStorage(null);
-            this.router.navigate(['/auth/login']);
-            return;
-          }
           this.setUserInStorage(user);
           const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
-          this.redirectUrl = null;
-          this.router.navigate([urlToNavigate]);
+          this.redirectUrl = null; this.router.navigate([urlToNavigate]);
         } else {
-          console.error("AuthService: Datos de usuario inválidos desde /api/auth/me:", user);
-          this.setUserInStorage(null);
-          this.router.navigate(['/auth/login']);
+          this.setUserInStorage(null); this.router.navigate(['/auth/login']);
         }
       },
-      error: (err) => {
-        console.error('AuthService: Fallo al obtener detalles del usuario de /api/auth/me:', err);
-        this.setUserInStorage(null);
-        this.router.navigate(['/auth/login']);
-      }
+      error: (err) => { this.setUserInStorage(null); this.router.navigate(['/auth/login']); }
     });
   }
 
   logout(): Observable<any> {
     const logoutUrl = `${this.backendUrl}/logout`;
-    console.log(`AuthService: Iniciando logout a ${logoutUrl}...`);
     return this.http.post(logoutUrl, {}, { observe: 'response', responseType: 'text', withCredentials: true }).pipe(
       tap(() => { this.setUserInStorage(null); this.router.navigate(['/auth/login']); }),
       catchError(() => { this.setUserInStorage(null); this.router.navigate(['/auth/login']); return EMPTY; })
@@ -145,9 +98,12 @@ export class AuthService {
   }
 
   registerEmpleado(empleado: Empleado): Observable<Empleado> {
-    const registerEmpleadoUrl = `${this.backendUrl}${this.apiPrefix}/empleados`;
+    // <<<--- VERIFICA Y USA LA URL CORRECTA DEL BACKEND ---<<<
+    // El error dice que Angular llama a /api/empleados/register
+    // Pero tu EmpleadoController.java está mapeado a POST /api/empleados
+    const registerEmpleadoUrl = `${this.backendUrl}${this.apiPrefix}/empleados`; // SIN /register
     console.log("AuthService: Intentando registrar empleado en URL:", registerEmpleadoUrl, "con datos:", empleado);
-    return this.http.post<Empleado>(registerEmpleadoUrl, empleado, { withCredentials: true });
+    return this.http.post<Empleado>(registerEmpleadoUrl, empleado, { withCredentials: true }); // withCredentials ES CRUCIAL
   }
 
   getCurrentUser = () => this.currentUserSubject.value;
@@ -156,7 +112,7 @@ export class AuthService {
     const user = this.getCurrentUser();
     if (!user) return false;
     if (role === 'ADMIN') return user.rol === 'ADMIN';
-    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN'; // Un ADMIN también es un EMPLEADO en términos de acceso a rutas de empleado
+    if (role === 'EMPLEADO') return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
     return user.rol === role;
   }
   isAdmin = () => this.hasRole('ADMIN');
