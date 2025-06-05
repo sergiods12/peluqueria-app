@@ -60,11 +60,13 @@
 
     <div *ngIf="isLoadingTramos" class="alert alert-info mt-3">Cargando horarios...</div>
 
-    <div *ngIf="!isLoadingTramos && tramosParaMostrar.length === 0 && !mensajeError" class="alert alert-info mt-3">
-      No hay tramos definidos por el empleado para esta fecha o no se pudo cargar la disponibilidad.
+    <!-- Mensaje cuando no hay tramos y no hay un error específico de carga -->
+    <div *ngIf="!isLoadingTramos && tramosParaMostrar.length === 0 && !mensajeError && reservaForm.get('fechaCita')?.value && reservaForm.get('servicio')?.value" class="alert alert-info mt-3">
+      No hay horarios disponibles para la fecha y servicio seleccionados, o el empleado no tiene disponibilidad.
     </div>
 
-    <div *ngIf="!isLoadingTramos && tramosParaMostrar.length > 0 && !hayTramosSeleccionables() && getTramosSeleccionados().length === 0" class="alert alert-warning mt-3">
+    <!-- Mensaje cuando hay tramos pero ninguno es un inicio posible para el servicio -->
+    <div *ngIf="!isLoadingTramos && tramosParaMostrar.length > 0 && !hayTramosSeleccionables() && !hayTramosSeleccionadosEnUI && !mensajeError" class="alert alert-warning mt-3">
       No hay suficientes horarios consecutivos disponibles que cumplan con la duración del servicio seleccionado. Por favor, elija otro servicio o fecha.
     </div>
 
@@ -72,34 +74,42 @@
       <div class="col" *ngFor="let tramo of tramosParaMostrar">
         <div class="card h-100 text-center tramo-card"
              [ngClass]="{
+               'tramo-available': tramo.estado === 'disponible',
                'tramo-available-clickable': tramo.estado === 'disponible' && tramo.esInicioPosible,
-               'tramo-available-not-clickable': tramo.estado === 'disponible' && !tramo.esInicioPosible,
-               'tramo-reserved': tramo.estado === 'reservadoOtro',
+               'tramo-reserved-other': tramo.estado === 'reservadoOtro',
+               'tramo-reserved-current': tramo.estado === 'reservadoCurrentUser',
                'tramo-selected': tramo.estado === 'seleccionado',
                'tramo-unavailable': tramo.estado === 'noSeleccionable'
              }"
              (click)="tramo.estado === 'disponible' && tramo.esInicioPosible ? seleccionarTramo(tramo) : null"
              [class.clickable]="tramo.estado === 'disponible' && tramo.esInicioPosible">
-          <div class="card-body p-2 d-flex flex-column justify-content-center align-items-center">
+          <div class="card-body d-flex flex-column justify-content-center align-items-center">
             <h6 class="card-title mb-1 tramo-time">{{ tramo.horaInicio }}</h6>
             <small *ngIf="tramo.estado === 'disponible' && tramo.esInicioPosible" class="tramo-status status-disponible">Disponible</small>
             <small *ngIf="tramo.estado === 'disponible' && !tramo.esInicioPosible" class="tramo-status status-insufficient">No encaja</small>
-            <small *ngIf="tramo.estado === 'reservadoOtro'" class="tramo-status status-reserved">Reservado</small>
+            <small *ngIf="tramo.estado === 'reservadoOtro'" class="tramo-status status-reserved-other">Reservado</small>
+            <small *ngIf="tramo.estado === 'reservadoCurrentUser'" class="tramo-status status-reserved-current">Tu Reserva</small>
             <small *ngIf="tramo.estado === 'seleccionado'" class="tramo-status status-selected">Seleccionado</small>
             <small *ngIf="tramo.estado === 'noSeleccionable'" class="tramo-status status-unavailable">No disponible</small>
           </div>
         </div>
       </div>
     </div>
-
-    <button *ngIf="getTramosSeleccionados().length > 0" (click)="confirmarReserva()" class="btn btn-success mt-4 w-100 py-2">
-      Confirmar Reserva: {{ getServicioSeleccionado()?.nombre }} ({{ getTramosSeleccionados().length }} tramo/s)
-    </button>
+    
+    <!-- Botones de acción -->
+    <div class="mt-4 d-flex justify-content-end gap-2" *ngIf="hayTramosSeleccionadosEnUI">
+        <button (click)="cancelarSeleccion()" class="btn btn-outline-secondary">
+            Cancelar Selección
+        </button>
+        <button (click)="confirmarReserva()" class="btn btn-primary" [disabled]="isLoadingTramos">
+          <span *ngIf="!isLoadingTramos">Reservar</span>
+          <span *ngIf="isLoadingTramos">Reservando...</span>
+        </button>
+    </div>
 
     <div *ngIf="mensajeError" class="alert alert-danger mt-3">{{ mensajeError }}</div>
     <div *ngIf="mensajeExito" class="alert alert-success mt-3">{{ mensajeExito }}</div>
   </div>
-
   <div *ngIf="!(reservaForm.get('peluqueria')?.value && reservaForm.get('empleado')?.value && reservaForm.get('fechaCita')?.value && reservaForm.get('servicio')?.value) && !isLoadingTramos" class="alert alert-secondary mt-3">
     Por favor, complete todos los campos (Peluquería, Peluquero/a, Servicio y Fecha) para ver los horarios.
   </div>

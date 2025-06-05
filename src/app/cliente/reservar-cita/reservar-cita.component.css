@@ -1,0 +1,108 @@
+/* src/app/cliente/reservar-cita/reservar-cita.component.css */
+
+.tramo-card {
+    border: 1px solid #dee2e6; /* Borde gris claro */
+    cursor: default;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    min-height: 60px; /* Asegura una altura mínima para mejor clickeabilidad */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tramo-card .card-body {
+    padding: 0.5rem;
+}
+
+.tramo-time {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.15rem;
+}
+
+.tramo-status {
+    font-size: 0.7rem;
+    font-weight: bold;
+    display: block; /* Asegura que ocupe su propia línea si es necesario */
+}
+
+/* Estado por defecto (Blanco) - para tramos disponibles pero no inicio posible */
+/* Increased specificity */
+.tramo-card.tramo-available {
+    background-color: #ffffff; /* Blanco */
+    color: #212529; /* Texto oscuro */
+    border-color: #dee2e6; /* Borde gris claro */
+}
+
+/* Tramos disponibles que PUEDEN ser inicio de selección (Blanco, con cursor pointer) */
+/* Increased specificity */
+.tramo-card.tramo-available-clickable {
+    background-color: #ffffff; /* Blanco */
+    color: #212529; /* Texto oscuro */
+    cursor: pointer;
+    border-color: #dee2e6; /* Borde gris claro */
+}
+
+.tramo-card.tramo-available-clickable:hover {
+    background-color: #e9ecef; /* Gris muy claro al pasar el ratón */
+}
+
+/* Tramos seleccionados (Naranja) - Increased specificity */
+.tramo-card.tramo-selected {
+    background-color: #fd7e14; /* Naranja */
+    color: white;
+    border-color: #e96a00; /* Naranja más oscuro para el borde */
+}
+.tramo-card.tramo-selected .tramo-status,
+.tramo-card.tramo-selected .tramo-time {
+    color: white;
+}
+
+/* Tramos reservados por OTRO (Rojo) - Increased specificity */
+.tramo-card.tramo-reserved-other {
+    background-color: #dc3545; /* Rojo */
+    color: white;
+    border-color: #c82333; /* Rojo más oscuro */
+}
+.tramo-card.tramo-reserved-other .tramo-status,
+.tramo-card.tramo-reserved-other .tramo-time {
+    color: white;
+}
+
+/* Tramos reservados por el USUARIO ACTUAL (Verde) - Increased specificity */
+.tramo-card.tramo-reserved-current {
+    background-color: #28a745; /* Verde */
+    color: white;
+    border-color: #1e7e34; /* Verde más oscuro */
+}
+.tramo-card.tramo-reserved-current .tramo-status,
+.tramo-card.tramo-reserved-current .tramo-time {
+    color: white;
+}
+
+/* Tramos no disponibles (Gris) - Increased specificity */
+.tramo-card.tramo-unavailable {
+    background-color: #adb5bd; /* Gris */
+    color: #495057; /* Texto gris oscuro */
+    border-color: #919ca5; /* Gris un poco más oscuro */
+    /* pointer-events: none; */ /* Opcional: si no quieres ninguna interacción */
+}
+.tramo-card.tramo-unavailable .tramo-status,
+.tramo-card.tramo-unavailable .tramo-time {
+    color: #495057;
+}
+
+
+/* Textos de estado específicos */
+.status-disponible { color: #198754; } /* Verde para texto "Disponible" */
+.status-insufficient { color: #6c757d; } /* Gris para "No encaja" */
+.status-reserved-other { color: #dc3545; } /* Rojo para "Reservado" (otros) */
+.status-reserved-current { color: #28a745; } /* Verde para "Tu Reserva" */
+.status-selected { color: #fd7e14; } /* Naranja para "Seleccionado" */
+.status-unavailable { color: #6c757d; } /* Gris para "No disponible" */
+
+/* Opcional: Estilo para deshabilitar interacción en tramos no clickeables */
+.tramo-card:not(.tramo-available-clickable) {
+    /* pointer-events: none; */ /* Deshabilita eventos de ratón */
+    /* opacity: 0.8; */ /* Opcional: reduce un poco la opacidad */
+}

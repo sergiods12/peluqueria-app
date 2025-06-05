@@ -13,13 +13,15 @@ import { PeluqueriaService } from '../../shared/services/peluqueria.service';
 import { EmpleadoService } from '../../shared/services/empleado.service';
 import { ServicioAppService } from '../../shared/services/servicio-app.service';
 import { TramoService } from '../../shared/services/tramo.service';
-import { ReservaRequestDTO } from '../../shared/models/reserva-request-dto.model'; // Importar DTO
+import { ReservaRequestDTO } from '../../shared/models/reserva-request-dto.model';
 
 @Component({
   selector: 'app-reservar-cita',
   templateUrl: './reservar-cita.component.html',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule]
+  imports: [CommonModule, ReactiveFormsModule],
+  // Asegúrate de que este archivo CSS exista en la misma carpeta que este componente TS.
+  styleUrls: ['./reservar-cita.component.css']
 })
 export class ReservarCitaComponent implements OnInit, OnDestroy {
   reservaForm!: FormGroup;
@@ -36,6 +38,9 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
   minDate: string;
   mensajeError: string | null = null;
   mensajeExito: string | null = null;
+
+  // !!! IMPORTANTE: Reemplaza esto con la lógica real para obtener el ID del cliente logueado
+  private currentClienteId: number | null = 1; // Ejemplo: Asume que el cliente con ID 1 está logueado
 
   private destroy$ = new Subject<void>();
 
@@ -194,6 +199,16 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
     this.mensajeExito = null;
     this.tramosParaMostrar = [];
 
+    // =========================================================================================
+    // NOTA IMPORTANTE:
+    // Para que se muestren TODOS los tramos (incluyendo los que el peluquero marcó como
+    // "no disponibles", es decir, `tramo.disponible === false`), el servicio
+    // `this.tramoService.getTramosDisponibles(fecha, empleadoId)` DEBE devolverlos.
+    // Si el servicio solo devuelve tramos "libres" (donde tramo.disponible es true y no hay citaId),
+    // el componente no podrá mostrar los tramos que el empleado marcó como no disponibles.
+    // La lógica de este componente está preparada para procesar y mostrar todos los tipos de tramos
+    // si son provistos por el servicio.
+    // =========================================================================================
     this.tramoService.getTramosDisponibles(fecha, empleadoId).pipe(
       takeUntil(this.destroy$),
       finalize(() => this.isLoadingTramos = false)
@@ -208,21 +223,32 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
         const numTramosNecesarios = servicioSeleccionado.numTramos;
 
         this.tramosParaMostrar = tramosDesdeBackend.map((tramo, index, array) => {
-          let estadoCalculado: 'disponible' | 'reservadoOtro' | 'seleccionado' | 'noSeleccionable' = 'noSeleccionable';
+          let estadoCalculado: Tramo['estado'];
           let esInicioPosibleCalculado = false;
 
-          // El backend ya debería indicar si el tramo está disponible (no tiene citaId y el empleado lo marcó como disponible)
-          // La propiedad 'disponible' del tramo del backend es clave aquí.
-          if (tramo.disponible && !tramo.citaId) {
-            estadoCalculado = 'disponible';
-            // Lógica para esInicioPosible
+          if (tramo.citaId) {
+            // Si el tramo tiene una citaId, está reservado.
+            // Idealmente, el backend indicaría si la cita es del currentClienteId.
+            // Por ahora, lo marcamos como 'reservadoOtro'. Se actualizará a 'reservadoCurrentUser' después de una reserva exitosa.
+             estadoCalculado = 'reservadoOtro'; // Se mostrará en ROJO
+          } else if (tramo.disponible) { // 'tramo.disponible' viene del backend. True = empleado lo marcó como disponible.
+            estadoCalculado = 'disponible'; // Se mostrará en BLANCO (o color por defecto)
+          } else {
+            // Si no tiene citaId y tramo.disponible es false,
+            // significa que el peluquero marcó este tramo como NO disponible.
+            estadoCalculado = 'noSeleccionable'; // Se mostrará en GRIS
+          }
+
+          // 'esInicioPosible' solo es relevante para tramos que están en estado 'disponible'
+          if (estadoCalculado === 'disponible') {
             let puedeSerInicio = true;
             if (index + numTramosNecesarios > array.length) {
-              puedeSerInicio = false; 
+              puedeSerInicio = false;
             } else {
               for (let i = 0; i < numTramosNecesarios; i++) {
                 const tramoConsecutivo = array[index + i];
-                // Un tramo consecutivo no es válido si no existe, no está disponible según el backend, o ya tiene una cita
+                // Para ser parte de una nueva selección, los tramos consecutivos deben estar realmente disponibles
+                // (según el backend, es decir, tramo.disponible === true) y no tener ya una cita.
                 if (!tramoConsecutivo || !tramoConsecutivo.disponible || tramoConsecutivo.citaId) {
                   puedeSerInicio = false;
                   break;
@@ -230,11 +256,9 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
               }
             }
             esInicioPosibleCalculado = puedeSerInicio;
-          } else if (tramo.citaId) {
-            estadoCalculado = 'reservadoOtro';
-          } else if (!tramo.disponible) { // Si el empleado no lo marcó como disponible
-              estadoCalculado = 'noSeleccionable';
           }
+          // Para cualquier otro estado ('reservadoOtro', 'noSeleccionable', 'reservadoCurrentUser'),
+          // esInicioPosibleCalculado permanecerá false, lo cual es correcto.
 
           return {
             ...tramo,
@@ -243,15 +267,13 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
           };
         });
 
-        if (this.tramosParaMostrar.length === 0 && tramosDesdeBackend.length > 0) {
-            // Esto podría significar que hay tramos pero ninguno es válido para el servicio
-            this.mensajeError = 'No hay suficientes horarios consecutivos disponibles para la duración del servicio seleccionado.';
-        } else if (tramosDesdeBackend.length === 0) {
+        if (tramosDesdeBackend.length === 0) {
             this.mensajeError = 'No hay horarios definidos por el empleado para esta fecha.';
+        } else if (this.tramosParaMostrar.length > 0 && !this.hayTramosSeleccionables()) {
+             this.mensajeError = 'No hay suficientes horarios consecutivos disponibles que cumplan con la duración del servicio seleccionado.';
+        } else {
+             this.mensajeError = null;
         }
-
-        // Para el mensaje en HTML: "!isLoadingTramos && tramosParaMostrar.length > 0 && !hayTramosSeleccionables() && getTramosSeleccionados().length === 0"
-        // Este se actualiza automáticamente al cambiar tramosParaMostrar
       },
       error: (err: any) => {
         console.error('Error al cargar tramos horarios:', err);
@@ -261,31 +283,73 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
   }
 
   seleccionarTramo(tramoSeleccionado: Tramo): void {
+    if (tramoSeleccionado.estado !== 'disponible' || !tramoSeleccionado.esInicioPosible) {
+        if (tramoSeleccionado?.estado === 'disponible' && !tramoSeleccionado?.esInicioPosible) {
+             this.mensajeError = 'Este horario no permite iniciar el servicio seleccionado (tramos insuficientes).';
+        }
+        return;
+    }
+    this.mensajeError = null;
+
     const servicioSeleccionado = this.getServicioSeleccionado();
-    if (!servicioSeleccionado || !tramoSeleccionado.esInicioPosible) return;
+    if (!servicioSeleccionado) return;
 
     const numTramosNecesarios = servicioSeleccionado.numTramos;
     const indiceInicio = this.tramosParaMostrar.findIndex(t => t.id === tramoSeleccionado.id);
 
+    // Deseleccionar todos los tramos previamente seleccionados
     this.tramosParaMostrar.forEach(t => {
       if (t.estado === 'seleccionado') {
-        // Re-evaluar su estado original antes de la selección
-        if (t.disponible && !t.citaId) t.estado = 'disponible';
-        else if (t.citaId) t.estado = 'reservadoOtro';
-        else t.estado = 'noSeleccionable';
+        // Revertir al estado original basado en los datos del backend
+        if (t.citaId) {
+             t.estado = 'reservadoOtro';
+        } else if (t.disponible) {
+            t.estado = 'disponible';
+        } else {
+            t.estado = 'noSeleccionable';
+        }
       }
     });
-    
-    // Recalcular esInicioPosible para todos los tramos disponibles después de deseleccionar
+
+    // Seleccionar los nuevos tramos
+    for (let i = 0; i < numTramosNecesarios; i++) {
+      const tramoActual = this.tramosParaMostrar[indiceInicio + i];
+      if (tramoActual) { // Asegurarse de que el tramo exista en el array
+          tramoActual.estado = 'seleccionado'; // Se mostrará en NARANJA
+      }
+    }
+  }
+
+  cancelarSeleccion(): void {
+    this.mensajeError = null;
+    this.mensajeExito = null;
+    this.tramosParaMostrar.forEach(t => {
+      if (t.estado === 'seleccionado') {
+        // Revertir al estado original
+        if (t.citaId) {
+             t.estado = 'reservadoOtro';
+        } else if (t.disponible) {
+            t.estado = 'disponible';
+        } else {
+            t.estado = 'noSeleccionable';
+        }
+      }
+    });
+
+    // Recalcular esInicioPosible para todos los tramos disponibles después de cancelar
+    const servicioSeleccionado = this.getServicioSeleccionado();
+    const numTramosNecesarios = servicioSeleccionado ? servicioSeleccionado.numTramos : 0;
+
     this.tramosParaMostrar.forEach((t, idx, arr) => {
-        if (t.estado === 'disponible') {
+        if (t.estado === 'disponible' && numTramosNecesarios > 0) {
             let puedeSerInicio = true;
             if (idx + numTramosNecesarios > arr.length) {
                 puedeSerInicio = false;
             } else {
                 for (let i = 0; i < numTramosNecesarios; i++) {
                     const tramoConsecutivo = arr[idx + i];
-                    if (!tramoConsecutivo || tramoConsecutivo.estado !== 'disponible') { // Solo puede seleccionar sobre disponibles
+                    // Para ser parte de una nueva selección, los tramos consecutivos deben estar realmente disponibles
+                    if (!tramoConsecutivo || tramoConsecutivo.estado !== 'disponible') {
                         puedeSerInicio = false;
                         break;
                     }
@@ -293,23 +357,10 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
             }
             t.esInicioPosible = puedeSerInicio;
         } else {
-            t.esInicioPosible = false; // Si no está disponible, no puede ser inicio
+            t.esInicioPosible = false;
         }
     });
-
-
-    // Ahora, si el tramo clickeado sigue siendo un inicio posible, lo seleccionamos
-    const tramoActualizado = this.tramosParaMostrar[indiceInicio];
-    if (tramoActualizado && tramoActualizado.estado === 'disponible' && tramoActualizado.esInicioPosible) {
-        for (let i = 0; i < numTramosNecesarios; i++) {
-            this.tramosParaMostrar[indiceInicio + i].estado = 'seleccionado';
-        }
-        this.mensajeError = null; // Limpiar error si la selección fue exitosa
-    } else {
-        this.mensajeError = "No se pueden seleccionar estos tramos para el servicio elegido.";
-    }
   }
-
 
   getTramosSeleccionados(): Tramo[] {
     return this.tramosParaMostrar.filter(t => t.estado === 'seleccionado');
@@ -329,8 +380,9 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
     this.mensajeError = null;
     this.mensajeExito = null;
     const tramosSeleccionados = this.getTramosSeleccionados();
+
     if (tramosSeleccionados.length === 0 || !tramosSeleccionados[0].id) {
-      this.mensajeError = "Por favor, seleccione un tramo horario válido.";
+      this.mensajeError = "Por favor, seleccione un tramo horario válido para reservar.";
       return;
     }
     const servicioSeleccionado = this.getServicioSeleccionado();
@@ -339,38 +391,50 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
         return;
     }
 
-    // Aquí necesitarías el ID del cliente logueado. Por ahora, usaré un placeholder.
-    const clienteIdPlaceholder = 1; // DEBES REEMPLAZAR ESTO CON EL ID DEL CLIENTE AUTENTICADO
+    if (this.currentClienteId === null) {
+        this.mensajeError = "Error: No se pudo obtener el ID del cliente logueado.";
+        console.error("Cliente ID is null. Cannot confirm reservation.");
+        return;
+    }
 
     const reservaDTO: ReservaRequestDTO = {
       primerTramoId: tramosSeleccionados[0].id,
-      clienteId: clienteIdPlaceholder, 
+      clienteId: this.currentClienteId,
       servicioId: servicioSeleccionado.id
     };
 
-    console.log('Confirmando reserva DTO:', reservaDTO);
     this.isLoadingTramos = true;
     this.tramoService.reservarMultiplesTramos(reservaDTO).pipe(
         takeUntil(this.destroy$),
         finalize(() => this.isLoadingTramos = false)
     ).subscribe({
-        next: (resp: any) => {
+        next: (resp: any) => { // Idealmente, 'resp' tendría un tipo definido si el backend devuelve un objeto específico
             this.mensajeExito = '¡Cita reservada con éxito!';
-            this.reservaForm.reset({
-                peluqueria: null,
-                empleado: { value: null, disabled: true },
-                servicio: { value: null, disabled: true },
-                fechaCita: { value: null, disabled: true }
+            // Actualizar el estado de los tramos recién reservados a 'reservadoCurrentUser'
+            tramosSeleccionados.forEach(tramoReservado => {
+                const tramoEnLista = this.tramosParaMostrar.find(t => t.id === tramoReservado.id);
+                if (tramoEnLista) {
+                    tramoEnLista.estado = 'reservadoCurrentUser'; // Se mostrará en VERDE
+                    tramoEnLista.esInicioPosible = false; // Ya no es un inicio posible
+                    // Aquí también deberías asignar el citaId y clienteId devueltos por el backend si es necesario
+                    // y si tu modelo Tramo los tiene (ej. tramoEnLista.citaId = resp.cita?.id;)
+                    // tramoEnLista.cliente = { id: this.currentClienteId } as Cliente; // Si tienes el objeto cliente
+                }
             });
-            this.empleadosPeluqueria = [];
-            this.servicios = [];
-            this.tramosParaMostrar = [];
+            // Opcional: Limpiar el formulario o solo los campos de selección de tramos
+            // this.reservaForm.reset({ ... }); // O solo resetear fecha/hora
         },
         error: (err: any) => {
             console.error('Error al confirmar reserva:', err);
-            this.mensajeError = err.error?.message || err.message || 'No se pudo confirmar la reserva. Intente de nuevo.';
-            this.intentarCargarTramos();
+            const backendErrorMessage = err.error?.message || err.message;
+            this.mensajeError = backendErrorMessage || 'No se pudo confirmar la reserva. Intente de nuevo.';
+            // Si la reserva falla, es buena idea revertir la selección visual
+            this.cancelarSeleccion();
         }
     });
+  }
+
+  get hayTramosSeleccionadosEnUI(): boolean {
+      return this.tramosParaMostrar.some(t => t.estado === 'seleccionado');
   }
 }
