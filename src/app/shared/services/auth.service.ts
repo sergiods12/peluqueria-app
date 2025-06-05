@@ -45,6 +45,7 @@ export class AuthService {
     }
     return null;
   }
+  
 
   private setUserInStorage(user: AuthUser | null) {
     if (typeof localStorage !== 'undefined') {
