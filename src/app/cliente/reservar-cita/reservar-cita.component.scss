@@ -57,16 +57,20 @@
     }
   }
 
-  // Green (Selected by current client)
+  // Estilos para tramos seleccionados (naranja) o reservados por el cliente (verde)
+  // El color de fondo específico (naranja o verde) vendrá de la función getColor()
+  // Esta clase puede usarse para estilos comunes como borde, fuente, transformaciones.
   &.tramo-selected {
-    background-color: #28a745; // Bootstrap's success
-    color: white;
-    border-color: #1e7e34;
     font-weight: bold;
     transform: scale(1.03);
-    box-shadow: 0 0 8px rgba(40, 167, 69, 0.4);
-     .tramo-status, .tramo-time { // Ensure text readability
-        color: white !important;
+    // El color de fondo y texto se manejan por getColor, pero podemos definir un box-shadow genérico
+    // o específico si el color de fondo es naranja o verde.
+    // Ejemplo de sombra que podría funcionar para ambos:
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+
+    // Si necesitas asegurar legibilidad y getColor no lo hace completamente:
+    .tramo-status, .tramo-time {
+      // color: white !important; // Descomentar si es necesario para el contraste
     }
   }
 }
@@ -78,4 +82,42 @@
 
 .form-select, .form-control {
   margin-bottom: 1rem;
+}
+
+// Estilos para el contenedor de los tramos horarios
+.tramos-container {
+  display: flex; // Habilita Flexbox
+  flex-direction: row; // Asegura que la dirección principal sea horizontal
+  flex-wrap: wrap; // Permite que los elementos pasen a la siguiente línea
+  justify-content: flex-start; // Alinea las filas de tramos al inicio. Puedes usar 'center' si lo prefieres.
+}
+
+// Estilos para cada tramo horario individual (franja/rectángulo)
+.tramo-slot {
+  display: flex; // Para centrar el contenido fácilmente
+  justify-content: center;
+  align-items: center;
+  width: 120px;  // Hacemos los tramos más anchos para que parezcan "franjas" o botones
+  height: 45px; // Ajustamos la altura
+  padding: 5px 10px; // Ajustamos el padding para el nuevo tamaño
+  margin: 5px;
+  cursor: pointer;
+  border: 1px solid; // El color específico del borde se aplica dinámicamente desde la función getColor
+  text-align: center;
+  font-size: 0.9rem; // Aumentamos ligeramente el tamaño de la fuente para mejor legibilidad
+  font-weight: 500;
+  border-radius: 4px; // Esquinas redondeadas
+  box-sizing: border-box; // Para que width/height incluyan padding y borde
+  transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out; // Pequeña animación
+
+  // Efecto hover para los tramos que son clicables
+  &.clickable:hover {
+    transform: scale(1.03); // Ajustamos el efecto hover
+    box-shadow: 0 2px 5px rgba(0,0,0,0.12); // Sombra sutil
+  }
+}
+
+// Estilos para el contenedor de los botones de acción
+.acciones {
+  margin-top: 20px;
 }

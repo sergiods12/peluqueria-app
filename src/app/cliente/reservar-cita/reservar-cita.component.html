@@ -1,8 +1,10 @@
+<!-- src/app/cliente/reservar-cita/reservar-cita.component.html -->
 <div class="container mt-3">
   <h2>Reservar Cita</h2>
 
   <form [formGroup]="reservaForm" class="mb-4">
     <div class="row g-3">
+      <!-- Selección de Peluquería -->
       <div class="col-md-4">
         <label for="peluqueria" class="form-label">Peluquería:</label>
         <select id="peluqueria" formControlName="peluqueria" class="form-select" [attr.disabled]="isLoadingPeluquerias ? true : null">
@@ -11,11 +13,9 @@
           </option>
           <option *ngFor="let p of peluquerias" [ngValue]="p.id">{{ p.nombre }}</option>
         </select>
-        <div *ngIf="reservaForm.get('peluqueria')?.invalid && reservaForm.get('peluqueria')?.touched" class="text-danger small mt-1">
-          Debe seleccionar una peluquería.
-        </div>
       </div>
 
+      <!-- Selección de Empleado -->
       <div class="col-md-4">
         <label for="empleado" class="form-label">Peluquero/a:</label>
         <select id="empleado" formControlName="empleado" class="form-select">
@@ -24,11 +24,9 @@
           </option>
           <option *ngFor="let e of empleadosPeluqueria" [ngValue]="e.id">{{ e.nombre }} ({{ e.rol }})</option>
         </select>
-        <div *ngIf="reservaForm.get('empleado')?.invalid && reservaForm.get('empleado')?.touched" class="text-danger small mt-1">
-          Debe seleccionar un peluquero/a.
-        </div>
       </div>
 
+      <!-- Selección de Servicio -->
       <div class="col-md-4">
         <label for="servicio" class="form-label">Tipo de Servicio:</label>
         <select id="servicio" formControlName="servicio" class="form-select">
@@ -37,25 +35,21 @@
           </option>
           <option *ngFor="let s of servicios" [ngValue]="s.id">{{ s.nombre }} ({{ s.numTramos * 30 }} min)</option>
         </select>
-        <div *ngIf="reservaForm.get('servicio')?.invalid && reservaForm.get('servicio')?.touched" class="text-danger small mt-1">
-          Debe seleccionar un servicio.
-        </div>
       </div>
     </div>
+
+    <!-- Selección de Fecha -->
     <div class="row g-3 mt-1">
-        <div class="col-md-4">
-            <label for="fechaCita" class="form-label">Fecha de la Cita:</label>
-            <input type="date" id="fechaCita" class="form-control"
-                   formControlName="fechaCita" [min]="minDate"
-                   [attr.disabled]="reservaForm.get('fechaCita')?.disabled ? true : null">
-            <div *ngIf="reservaForm.get('fechaCita')?.invalid && reservaForm.get('fechaCita')?.touched" class="text-danger small mt-1">
-              Debe seleccionar una fecha.
-            </div>
-          </div>
+      <div class="col-md-4">
+        <label for="fechaCita" class="form-label">Fecha de la Cita:</label>
+        <input type="date" id="fechaCita" class="form-control" formControlName="fechaCita" [min]="minDate"
+               [attr.disabled]="reservaForm.get('fechaCita')?.disabled ? true : null">
+      </div>
     </div>
   </form>
 
-  <div *ngIf="reservaForm.get('peluqueria')?.value && reservaForm.get('empleado')?.value && reservaForm.get('fechaCita')?.value && reservaForm.get('servicio')?.value">
+  <!-- Visualización de Tramos como tarjetas -->
+  <div *ngIf="reservaForm.valid">
     <h4 class="mt-4">Horarios para el {{ reservaForm.get('fechaCita')?.value | date:'dd/MM/yyyy' }}:</h4>
 
     <div *ngIf="isLoadingTramos" class="alert alert-info mt-3">Cargando horarios...</div>
@@ -64,43 +58,45 @@
       No hay tramos definidos por el empleado para esta fecha o no se pudo cargar la disponibilidad.
     </div>
 
-    <div *ngIf="!isLoadingTramos && tramosParaMostrar.length > 0 && !hayTramosSeleccionables() && getTramosSeleccionados().length === 0" class="alert alert-warning mt-3">
-      No hay suficientes horarios consecutivos disponibles que cumplan con la duración del servicio seleccionado. Por favor, elija otro servicio o fecha.
-    </div>
+    <div *ngIf="!isLoadingTramos && tramosParaMostrar.length > 0">
+      <div class="row mt-3">
+        <div *ngFor="let tramo of tramosParaMostrar" class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
+          <div class="tramo-card"
+            [ngStyle]="getColor(tramo)" 
+            [ngClass]="{
+              'tramo-unavailable': tramo.estado === 'noSeleccionable',
+              'tramo-available-clickable': tramo.estado === 'disponible' && tramo.esInicioPosible,
+              'tramo-available-not-clickable': tramo.estado === 'disponible' && !tramo.esInicioPosible,
+              'tramo-reserved': tramo.estado === 'reservadoOtro',
+              'tramo-selected': tramo.estado === 'seleccionado' || tramo.estado === 'reservadoPropio'
+            }"
+     [title]="getTramoTitle(tramo)"
+     (click)="seleccionarTramo(tramo)">
 
-    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-2 mt-2">
-      <div class="col" *ngFor="let tramo of tramosParaMostrar">
-        <div class="card h-100 text-center tramo-card"
-             [ngClass]="{
-               'tramo-available-clickable': tramo.estado === 'disponible' && tramo.esInicioPosible,
-               'tramo-available-not-clickable': tramo.estado === 'disponible' && !tramo.esInicioPosible,
-               'tramo-reserved': tramo.estado === 'reservadoOtro',
-               'tramo-selected': tramo.estado === 'seleccionado',
-               'tramo-unavailable': tramo.estado === 'noSeleccionable'
-             }"
-             (click)="tramo.estado === 'disponible' && tramo.esInicioPosible ? seleccionarTramo(tramo) : null"
-             [class.clickable]="tramo.estado === 'disponible' && tramo.esInicioPosible">
-          <div class="card-body p-2 d-flex flex-column justify-content-center align-items-center">
-            <h6 class="card-title mb-1 tramo-time">{{ tramo.horaInicio }}</h6>
-            <small *ngIf="tramo.estado === 'disponible' && tramo.esInicioPosible" class="tramo-status status-disponible">Disponible</small>
-            <small *ngIf="tramo.estado === 'disponible' && !tramo.esInicioPosible" class="tramo-status status-insufficient">No encaja</small>
-            <small *ngIf="tramo.estado === 'reservadoOtro'" class="tramo-status status-reserved">Reservado</small>
-            <small *ngIf="tramo.estado === 'seleccionado'" class="tramo-status status-selected">Seleccionado</small>
-            <small *ngIf="tramo.estado === 'noSeleccionable'" class="tramo-status status-unavailable">No disponible</small>
+            <div class="card-body">
+              <div class="tramo-time">{{ tramo.horaInicio }}</div>
+              <div class="tramo-status">{{ getTramoTitle(tramo) }}</div>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Botones de Acción -->
+      <div class="acciones mt-4">
+        <button (click)="cancelarSeleccion()" class="btn btn-warning me-2">Cancelar Selección</button>
+        <button [disabled]="getTramosSeleccionados().length === 0 || isConfirmingReserva || !reservaForm.valid"
+                (click)="confirmarReserva()" class="btn btn-success">
+          {{ isConfirmingReserva ? 'Confirmando...' : 'Reservar' }}
+        </button>
+      </div>
     </div>
 
-    <button *ngIf="getTramosSeleccionados().length > 0" (click)="confirmarReserva()" class="btn btn-success mt-4 w-100 py-2">
-      Confirmar Reserva: {{ getServicioSeleccionado()?.nombre }} ({{ getTramosSeleccionados().length }} tramo/s)
-    </button>
-
+    <!-- Mensajes -->
     <div *ngIf="mensajeError" class="alert alert-danger mt-3">{{ mensajeError }}</div>
     <div *ngIf="mensajeExito" class="alert alert-success mt-3">{{ mensajeExito }}</div>
   </div>
 
-  <div *ngIf="!(reservaForm.get('peluqueria')?.value && reservaForm.get('empleado')?.value && reservaForm.get('fechaCita')?.value && reservaForm.get('servicio')?.value) && !isLoadingTramos" class="alert alert-secondary mt-3">
-    Por favor, complete todos los campos (Peluquería, Peluquero/a, Servicio y Fecha) para ver los horarios.
+  <div *ngIf="!reservaForm.valid && !isLoadingTramos" class="alert alert-secondary mt-3">
+    Por favor, complete todos los campos para ver los horarios.
   </div>
 </div>

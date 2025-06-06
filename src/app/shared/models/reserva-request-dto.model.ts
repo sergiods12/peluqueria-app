@@ -1,6 +1,7 @@
-// src/app/shared/models/reserva-request-dto.model.ts
 export interface ReservaRequestDTO {
-  primerTramoId: number;
-  clienteId: number;
+  tramoId: number;
   servicioId: number;
+  clienteId: number;
+  fecha: string;
+  empleadoId: number; // ✅ Añade esta línea
 }
