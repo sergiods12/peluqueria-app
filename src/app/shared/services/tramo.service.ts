@@ -10,7 +10,7 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root'
 })
 export class TramoService {
-  private apiUrl = `${environment.apiUrl}${environment.apiPrefix}/tramos`;
+  private apiUrl = 'http://localhost:8901/api/tramos';
 
   constructor(private http: HttpClient) { }
 
@@ -19,6 +19,10 @@ export class TramoService {
       .set('fecha', fecha)
       .set('empleadoId', empleadoId.toString());
     return this.http.get<Tramo[]>(`${this.apiUrl}/disponibles`, { params, withCredentials: true });
+  }
+
+  reservarTramos(reserva: ReservaRequestDTO): Observable<any> {
+    return this.http.post(`${this.apiUrl}/reservar`, reserva);
   }
 
   getTramosByCliente(clienteId: number): Observable<Tramo[]> {

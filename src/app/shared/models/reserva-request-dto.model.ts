@@ -3,5 +3,8 @@ export interface ReservaRequestDTO {
   servicioId: number;
   clienteId: number;
   fecha: string;
-  empleadoId: number; // ✅ Añade esta línea
+  empleadoId: number; 
+  idsTramos: number[];
+  primerTramoId: number;
+
 }

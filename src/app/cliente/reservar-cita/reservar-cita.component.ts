@@ -1,4 +1,4 @@
-// c:\Users\Sergi\peluqueria-app\src\app\cliente\reservar-cita\reservar-cita.component.ts
+// reservar-cita.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
@@ -9,6 +9,7 @@ import { Peluqueria } from '../../shared/models/peluqueria.model';
 import { Empleado } from '../../shared/models/empleado.model';
 import { Servicio } from '../../shared/models/servicio.model';
 import { Tramo } from '../../shared/models/tramo.model';
+
 
 import { PeluqueriaService } from '../../shared/services/peluqueria.service';
 import { EmpleadoService } from '../../shared/services/empleado.service';
@@ -377,7 +378,7 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
     // Comportamiento al hacer clic:
     if (tramoClickeado.estado === 'seleccionado') {
         // Si se hace clic en un tramo ya seleccionado, se deselecciona todo el bloque.
-        this.cancelarSeleccion(); 
+        this.cancelarSeleccion();
         this.mensajeError = null; // Limpiar error si la acción fue deseleccionar
         return;
     } else if (tramoClickeado.estado === 'disponible' && tramoClickeado.esInicioPosible) {
@@ -469,68 +470,75 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
 
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser || currentUser.rol !== 'CLIENTE') {
-        this.mensajeError = "Debe estar logueado como cliente para realizar una reserva.";
-        return;
+      this.mensajeError = "Debe estar logueado como cliente para realizar una reserva.";
+      return;
     }
-    const clienteId = currentUser.id;
 
+    const clienteId = currentUser.id;
     const tramosSeleccionados = this.getTramosSeleccionados();
-    if (tramosSeleccionados.length === 0 || !tramosSeleccionados[0].id) {
+
+    if (tramosSeleccionados.length === 0 || !tramosSeleccionados[0]?.id) {
       this.mensajeError = "Por favor, seleccione un tramo horario válido.";
+      return;
+    }
+
+    const algunoReservado = tramosSeleccionados.some(t => !t.disponible || t.cliente);
+    if (algunoReservado) {
+      this.mensajeError = "Uno o más tramos seleccionados ya no están disponibles. Recarga y vuelve a intentar.";
+      this.intentarCargarTramos();
       return;
     }
 
     const servicioSeleccionado = this.getServicioSeleccionado();
     if (!servicioSeleccionado || !servicioSeleccionado.id) {
-        this.mensajeError = "Servicio no válido seleccionado.";
-        return;
+      this.mensajeError = "Servicio no válido seleccionado.";
+      return;
     }
 
     const empleadoIdValue = this.reservaForm.get('empleado')?.value;
     const fechaCitaValue = this.reservaForm.get('fechaCita')?.value;
 
-    if (!empleadoIdValue) {
-        this.mensajeError = "El empleado no está seleccionado en el formulario.";
-        return;
-    }
-    if (!fechaCitaValue) {
-        this.mensajeError = "La fecha de la cita no está seleccionada en el formulario.";
-        return;
+    if (!empleadoIdValue || !fechaCitaValue) {
+      this.mensajeError = "Empleado y fecha deben estar seleccionados.";
+      return;
     }
 
+    const idsDeTramosSeleccionados = tramosSeleccionados.map(t => t.id!);
+
     const reservaDTO: ReservaRequestDTO = {
-      tramoId: tramosSeleccionados[0].id,
+      primerTramoId: idsDeTramosSeleccionados[0],
       clienteId: clienteId,
       servicioId: servicioSeleccionado.id,
+      idsTramos: idsDeTramosSeleccionados,
+      tramoId: idsDeTramosSeleccionados[0], // redundante pero por compatibilidad
       empleadoId: empleadoIdValue,
       fecha: fechaCitaValue
     };
 
     console.log('Confirmando reserva DTO:', reservaDTO);
     this.isConfirmingReserva = true;
-    this.tramoService.reservarMultiplesTramos(reservaDTO).pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.isConfirmingReserva = false)
-    ).subscribe({
-        next: (resp: any) => {
-            this.mensajeExito = 'Reserva realizada con éxito';
-            const tramosReservadosIds = this.getTramosSeleccionados().map(t => t.id);
 
-            this.tramosParaMostrar.forEach(t => {
-              if (tramosReservadosIds.includes(t.id)) {
-                t.estado = 'reservadoPropio'; // Verde
-                t.esInicioPosible = false; // Ya no es un inicio posible
-                // Si el backend devuelve el ID de la cita creada, podrías asignarlo aquí:
-                // t.citaId = resp.cita?.id; // Asumiendo que resp.cita contiene la cita
-              }
-            });
-            this.recalculateEsInicioPosibleForAllTramos(); // Actualiza la UI de los tramos
-        },
-        error: (err: any) => {
-            console.error('Error al confirmar reserva:', err);
-            this.mensajeError = err.error?.message || err.message || 'No se pudo realizar la reserva.';
-            this.intentarCargarTramos(); // Recargar tramos para reflejar el estado actual del backend
-        }
+    this.tramoService.reservarTramos(reservaDTO).pipe(
+      takeUntil(this.destroy$),
+      finalize(() => this.isConfirmingReserva = false)
+    ).subscribe({
+      next: (resp: any) => {
+        this.mensajeExito = 'Reserva realizada con éxito';
+        const tramosReservadosIds = this.getTramosSeleccionados().map(t => t.id!); // Asegurar que id no es undefined
+
+        this.tramosParaMostrar.forEach(t => {
+          if (t.id && tramosReservadosIds.includes(t.id)) { // Comprobar que t.id existe
+            t.estado = 'reservadoPropio';
+            t.esInicioPosible = false;
+          }
+        });
+        this.recalculateEsInicioPosibleForAllTramos();
+      },
+      error: (err: any) => {
+        console.error('Error al confirmar reserva:', err);
+        this.mensajeError = err.error?.message || err.message || 'No se pudo realizar la reserva.';
+        this.intentarCargarTramos();
+      }
     });
   }
 }

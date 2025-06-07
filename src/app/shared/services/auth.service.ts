@@ -1,4 +1,4 @@
-// src/app/shared/services/auth.service.ts
+// auth.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap, catchError, EMPTY, map, switchMap, throwError } from 'rxjs';
@@ -114,7 +114,7 @@ export class AuthService {
       tap(user => {
         // Este tap se ejecuta después de que fetchUserDetails es exitoso
         console.log("AuthService: Detalles del usuario recibidos y validados:", user);
-        this.setUserInStorage(user);
+        this.setUserInStorage(user); // Esto guarda currentUser, pero el token se guarda en fetchUserDetails
         const urlToNavigate = this.redirectUrl || (user.rol === 'CLIENTE' ? '/cliente' : '/empleado');
         this.redirectUrl = null; // Limpiar redirectUrl después de usarlo
         console.log("AuthService: Navegando a:", urlToNavigate);
@@ -135,25 +135,49 @@ export class AuthService {
     console.log(`AuthService: Iniciando fetchUserDetails para ${userDetailsUrl}...`);
     // Expect AuthUserResponse which might include a token
     return this.http.get<AuthUserResponse>(userDetailsUrl, { withCredentials: true }).pipe(
-      map(response => {
-        console.log("AuthService: Detalles del usuario (y token potencial) recibidos de /api/auth/me:", response);
-        if (response && response.id != null && response.email && response.rol && response.nombre) {
-          // Store the token if present
-          if (response.token && typeof localStorage !== 'undefined') {
-            localStorage.setItem('authToken', response.token);
-            console.log('AuthService: authToken stored in localStorage from fetchUserDetails.');
-          }
-          if (!['CLIENTE', 'EMPLEADO', 'ADMIN'].includes(response.rol)) {
-            console.error("AuthService: Rol de usuario inválido recibido de /api/auth/me:", response.rol);
-            throw new Error("Rol de usuario inválido recibido del servidor.");
-          }
-          return response; // Usuario válido, 'response' es de tipo AuthUserResponse que extiende AuthUser
-        } else {
+      map(response => { // response es de tipo AuthUserResponse
+        console.log("AuthService: Raw response from /api/auth/me:", response); // Log para depuración
+
+        if (!response || response.id == null || !response.email || !response.rol || !response.nombre) {
           console.error("AuthService: Datos de usuario inválidos o incompletos desde /api/auth/me:", response);
           throw new Error("Datos de usuario inválidos o incompletos recibidos del servidor.");
         }
+
+        if (!['CLIENTE', 'EMPLEADO', 'ADMIN'].includes(response.rol)) {
+          console.error("AuthService: Rol de usuario inválido recibido de /api/auth/me:", response.rol);
+          throw new Error("Rol de usuario inválido recibido del servidor.");
+        }
+
+        // Manejo del token
+        if (response.token) {
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('authToken', response.token);
+            console.log('AuthService: authToken stored in localStorage from fetchUserDetails.');
+          } else {
+            console.warn('AuthService: localStorage is not available, cannot store authToken.');
+          }
+        } else {
+          console.warn('AuthService: No token field found or token is empty in the response from /api/auth/me. This is likely the cause of missing Authorization headers.');
+          // Considerar si esto debería ser un error que impida el login si el token es esencial.
+        }
+
+        // Construir el objeto AuthUser para el BehaviorSubject y el retorno
+        const authUser: AuthUser = {
+          id: response.id,
+          nombre: response.nombre,
+          email: response.email,
+          rol: response.rol
+        };
+        // Actualizar currentUserSubject aquí también, después de tener el AuthUser y potencialmente el token.
+        // this.currentUserSubject.next(authUser); // OJO: setUserInStorage ya hace esto.
+                                                // El token se guarda en localStorage, currentUser en localStorage y en el BehaviorSubject.
+        return authUser;
+      }),
+      catchError(err => {
+        console.error('AuthService: Error en fetchUserDetails:', err);
+        this.clearUserAndTokenFromStorage(); // Limpiar almacenamiento en caso de error aquí
+        return throwError(() => new Error(err.message || 'Error al obtener detalles del usuario.'));
       })
-      // El catchError general en el pipe de login manejará los errores de esta llamada
     );
   }
 
@@ -171,8 +195,7 @@ export class AuthService {
         console.error('AuthService: Fallo en la llamada de logout al backend:', err, 'Limpiando usuario y navegando a /auth/login de todas formas.');
         this.clearUserAndTokenFromStorage();
         this.router.navigate(['/auth/login']); // Navigate even if backend logout fails
-        return EMPTY; // Retorna EMPTY para que el suscriptor no reciba el error, ya que hemos manejado la lógica de limpieza.
-                     // Si el componente necesita saber sobre el error, considera usar throwError(err).
+        return EMPTY; 
       })
     );
   }
@@ -199,7 +222,6 @@ export class AuthService {
       return user.rol === 'ADMIN';
     }
     if (role === 'EMPLEADO') {
-      // Un ADMIN también tiene el rol de EMPLEADO en términos de permisos
       return user.rol === 'EMPLEADO' || user.rol === 'ADMIN';
     }
     return user.rol === role;
