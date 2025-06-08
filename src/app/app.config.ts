@@ -5,7 +5,6 @@ import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi, withXsrfC
 import { routes } from './app.routes'; // Correct import
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { DatePipe } from '@angular/common'; // Import DatePipe
-import { AuthInterceptor } from './auth.interceptor'; // Import AuthInterceptor
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -16,9 +15,6 @@ export const appConfig: ApplicationConfig = {
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
       withFetch()
     ),
-    // Your AuthInterceptor is correctly registered here
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
-    provideClientHydration(withEventReplay()),
-    DatePipe
+    
   ]
 };

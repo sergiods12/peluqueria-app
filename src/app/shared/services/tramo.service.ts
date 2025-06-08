@@ -1,10 +1,10 @@
-// src/app/shared/services/tramo.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Tramo } from '../models/tramo.model';
 import { ReservaRequestDTO } from '../models/reserva-request-dto.model';
 import { environment } from '../../../environments/environment';
+
 
 @Injectable({
   providedIn: 'root'
@@ -22,8 +22,15 @@ export class TramoService {
   }
 
   reservarTramos(reserva: ReservaRequestDTO): Observable<any> {
-    return this.http.post(`${this.apiUrl}/reservar`, reserva);
+    return this.http.post(`${this.apiUrl}/reservar`, reserva, { withCredentials: true });
   }
+
+  getTramosPorEmpleadoYFecha(fecha: string, empleadoId: number): Observable<Tramo[]> {
+  return this.http.get<Tramo[]>(
+    `${this.apiUrl}/empleado/${empleadoId}/fecha/${fecha}`,
+    { withCredentials: true } // NECESARIO
+  );
+}
 
   getTramosByCliente(clienteId: number): Observable<Tramo[]> {
     return this.http.get<Tramo[]>(`${environment.apiUrl}${environment.apiPrefix}/clientes/${clienteId}/reservas`, { withCredentials: true });

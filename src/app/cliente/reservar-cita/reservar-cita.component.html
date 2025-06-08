@@ -4,7 +4,7 @@
 
   <form [formGroup]="reservaForm" class="mb-4">
     <div class="row g-3">
-      <!-- Selección de Peluquería -->
+      <!-- Peluquería -->
       <div class="col-md-4">
         <label for="peluqueria" class="form-label">Peluquería:</label>
         <select id="peluqueria" formControlName="peluqueria" class="form-select" [attr.disabled]="isLoadingPeluquerias ? true : null">
@@ -15,7 +15,7 @@
         </select>
       </div>
 
-      <!-- Selección de Empleado -->
+      <!-- Empleado -->
       <div class="col-md-4">
         <label for="empleado" class="form-label">Peluquero/a:</label>
         <select id="empleado" formControlName="empleado" class="form-select">
@@ -26,7 +26,7 @@
         </select>
       </div>
 
-      <!-- Selección de Servicio -->
+      <!-- Servicio -->
       <div class="col-md-4">
         <label for="servicio" class="form-label">Tipo de Servicio:</label>
         <select id="servicio" formControlName="servicio" class="form-select">
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <!-- Selección de Fecha -->
+    <!-- Fecha -->
     <div class="row g-3 mt-1">
       <div class="col-md-4">
         <label for="fechaCita" class="form-label">Fecha de la Cita:</label>
@@ -48,7 +48,7 @@
     </div>
   </form>
 
-  <!-- Visualización de Tramos como tarjetas -->
+  <!-- Horarios -->
   <div *ngIf="reservaForm.valid">
     <h4 class="mt-4">Horarios para el {{ reservaForm.get('fechaCita')?.value | date:'dd/MM/yyyy' }}:</h4>
 
@@ -61,27 +61,25 @@
     <div *ngIf="!isLoadingTramos && tramosParaMostrar.length > 0">
       <div class="row mt-3">
         <div *ngFor="let tramo of tramosParaMostrar" class="col-6 col-sm-4 col-md-3 col-lg-2 mb-3">
-          <div class="tramo-card"
-            [ngStyle]="getColor(tramo)" 
-            [ngClass]="{
-              'tramo-unavailable': tramo.estado === 'noSeleccionable',
-              'tramo-available-clickable': tramo.estado === 'disponible' && tramo.esInicioPosible,
-              'tramo-available-not-clickable': tramo.estado === 'disponible' && !tramo.esInicioPosible,
-              'tramo-reserved': tramo.estado === 'reservadoOtro',
-              'tramo-selected': tramo.estado === 'seleccionado' || tramo.estado === 'reservadoPropio'
-            }"
-     [title]="getTramoTitle(tramo)"
-     (click)="seleccionarTramo(tramo)">
-
-            <div class="card-body">
-              <div class="tramo-time">{{ tramo.horaInicio }}</div>
-              <div class="tramo-status">{{ getTramoTitle(tramo) }}</div>
+          <div class="card h-100 text-center px-2 py-3 shadow-sm"
+               [ngStyle]="getColor(tramo)"
+               style="cursor: pointer; border-radius: 12px; border-width: 2px;"
+               [title]="getTramoTitle(tramo)"
+               (click)="seleccionarTramo(tramo)">
+            <div class="tramo-time fw-bold">{{ tramo.horaInicio }}</div>
+            <div class="tramo-status small">
+              <span *ngIf="tramo.estado === 'disponible' && tramo.esInicioPosible">Disponible</span>
+              <span *ngIf="tramo.estado === 'disponible' && !tramo.esInicioPosible">Disponible (no válido para inicio)</span>
+              <span *ngIf="tramo.estado === 'noSeleccionable'">No disponible</span>
+              <span *ngIf="tramo.estado === 'reservadoOtro'">Reservado</span>
+              <span *ngIf="tramo.estado === 'reservadoPropio'">Reservado por ti</span>
+              <span *ngIf="tramo.estado === 'seleccionado'">Seleccionado</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Botones de Acción -->
+      <!-- Acciones -->
       <div class="acciones mt-4">
         <button (click)="cancelarSeleccion()" class="btn btn-warning me-2">Cancelar Selección</button>
         <button [disabled]="getTramosSeleccionados().length === 0 || isConfirmingReserva || !reservaForm.valid"

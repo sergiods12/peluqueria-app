@@ -14,6 +14,6 @@ export interface Tramo {
   cliente?: Cliente;   // Representa la relación ManyToOne con Cliente
   servicio?: Servicio; // Representa la relación ManyToOne con Servicio
   citaId?: number; // Opcional, si el tramo está asociado a una cita (lo añadí en la lógica anterior, es bueno tenerlo)
-  estado?: 'disponible' | 'reservadoOtro' | 'seleccionado' | 'noSeleccionable' | 'reservadoPropio';
+  estado?: 'disponible' | 'reservadoOtro' | 'reservadoPropio' | 'seleccionado' | 'noSeleccionable';
   esInicioPosible?: boolean; // Para la lógica de selección de tramos en la UI
 }

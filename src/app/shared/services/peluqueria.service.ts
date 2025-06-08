@@ -13,10 +13,10 @@ export class PeluqueriaService {
   constructor(private http: HttpClient) { }
 
   getAllPeluquerias(): Observable<Peluqueria[]> {
-    return this.http.get<Peluqueria[]>(this.apiUrl);
+    return this.http.get<Peluqueria[]>(this.apiUrl, { withCredentials: true });
   }
 
   createPeluqueria(peluqueria: Peluqueria): Observable<Peluqueria> {
-    return this.http.post<Peluqueria>(this.apiUrl, peluqueria);
+    return this.http.post<Peluqueria>(this.apiUrl, peluqueria, { withCredentials: true });
   }
 }

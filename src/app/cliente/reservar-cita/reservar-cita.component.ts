@@ -299,41 +299,38 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
     this.mensajeExito = null;
     this.tramosParaMostrar = [];
 
-    this.tramoService.getTramosDisponibles(fecha, empleadoId).pipe(
+    this.tramoService.getTramosPorEmpleadoYFecha(fecha, empleadoId).pipe(
       takeUntil(this.destroy$),
       finalize(() => this.isLoadingTramos = false)
     ).subscribe({
       next: (tramosDesdeBackend: Tramo[]) => {
-      const servicioSeleccionado = this.getServicioSeleccionado();
+        const servicioSeleccionado = this.getServicioSeleccionado();
         if (!servicioSeleccionado) {
           this.tramosParaMostrar = [];
           this.mensajeError = 'Por favor, seleccione un servicio válido.';
           return;
         }
 
-      const numTramosNecesarios = servicioSeleccionado.numTramos;
-
-      tramosDesdeBackend.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
-
+        const numTramosNecesarios = servicioSeleccionado.numTramos;
+        tramosDesdeBackend.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
 
         this.tramosParaMostrar = tramosDesdeBackend.map((tramo, index, array) => {
           let estadoCalculado: 'disponible' | 'reservadoOtro' | 'noSeleccionable';
           let esInicioPosibleCalculado = false;
 
-          if (tramo.citaId) { // Ya está reservado
-            estadoCalculado = 'reservadoOtro'; // Rojo
-          } else if (tramo.disponible) { // Marcado como disponible por el empleado y no reservado
-            estadoCalculado = 'disponible'; // Blanco
-            // Calcular si puede ser un inicio de selección
+          if (tramo.citaId) {
+            estadoCalculado = 'reservadoOtro';
+          } else if (tramo.disponible) {
+            estadoCalculado = 'disponible';
+
             if (numTramosNecesarios > 0) {
               let puedeSerInicio = true;
               if (index + numTramosNecesarios > array.length) {
                 puedeSerInicio = false;
               } else {
                 for (let i = 0; i < numTramosNecesarios; i++) {
-                  const tramoConsecutivo = array[index + i];
-                  // Para ser inicio, todos los tramos necesarios deben estar marcados como 'disponible' por el empleado y no tener cita
-                  if (!tramoConsecutivo || !tramoConsecutivo.disponible || tramoConsecutivo.citaId) {
+                  const siguienteTramo = array[index + i];
+                  if (!siguienteTramo || !siguienteTramo.disponible || siguienteTramo.citaId) {
                     puedeSerInicio = false;
                     break;
                   }
@@ -341,8 +338,8 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
               }
               esInicioPosibleCalculado = puedeSerInicio;
             }
-          } else { // No disponible por el empleado y no reservado
-            estadoCalculado = 'noSeleccionable'; // Gris
+          } else {
+            estadoCalculado = 'noSeleccionable';
           }
 
           return {
@@ -353,17 +350,18 @@ export class ReservarCitaComponent implements OnInit, OnDestroy {
         });
 
         if (this.tramosParaMostrar.length === 0 && tramosDesdeBackend.length > 0) {
-            this.mensajeError = 'No hay suficientes horarios consecutivos disponibles para la duración del servicio seleccionado.';
+          this.mensajeError = 'No hay suficientes horarios consecutivos disponibles para el servicio.';
         } else if (tramosDesdeBackend.length === 0) {
-            this.mensajeError = 'No hay horarios definidos por el empleado para esta fecha.';
+          this.mensajeError = 'No hay horarios definidos para esta fecha.';
         }
       },
       error: (err: any) => {
         console.error('Error al cargar tramos horarios:', err);
-        this.mensajeError = 'Error al cargar los horarios disponibles. Intente de nuevo.';
+        this.mensajeError = 'Error al cargar los horarios. Intente de nuevo.';
       }
     });
   }
+
 
   seleccionarTramo(tramoClickeado: Tramo): void {
     const servicioSeleccionado = this.getServicioSeleccionado();

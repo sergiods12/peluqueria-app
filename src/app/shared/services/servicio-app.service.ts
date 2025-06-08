@@ -13,6 +13,6 @@ export class ServicioAppService {
   constructor(private http: HttpClient) { }
 
   getAllServicios(): Observable<Servicio[]> {
-    return this.http.get<Servicio[]>(this.apiUrl);
+    return this.http.get<Servicio[]>(this.apiUrl, { withCredentials: true });
   }
 }
