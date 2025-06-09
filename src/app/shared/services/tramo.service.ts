@@ -32,9 +32,11 @@ export class TramoService {
   );
 }
 
-  getTramosByCliente(clienteId: number): Observable<Tramo[]> {
-    return this.http.get<Tramo[]>(`${environment.apiUrl}${environment.apiPrefix}/clientes/${clienteId}/reservas`, { withCredentials: true });
-  }
+  getReservasPorCliente(clienteId: number): Observable<Tramo[]> {
+  return this.http.get<Tramo[]>(`${this.apiUrl}/cliente/${clienteId}`, {
+    withCredentials: true
+  });
+}
 
   reservarMultiplesTramos(reservaRequest: ReservaRequestDTO): Observable<Tramo[]> {
     return this.http.post<Tramo[]>(`${this.apiUrl}/reservar`, reservaRequest, { withCredentials: true });

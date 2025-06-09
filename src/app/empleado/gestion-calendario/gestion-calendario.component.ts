@@ -86,7 +86,7 @@ export class GestionCalendarioComponent implements OnInit {
     }
     this.isLoading = true;
     this.mensaje = null;
-    this.tramoService.getTramosDisponibles(this.fechaSeleccionada, this.currentUser.id)
+    this.tramoService.getTramosPorEmpleadoYFecha(this.fechaSeleccionada, this.currentUser.id)
       .subscribe({
         next: (tramosDesdeBackend) => {
           this.tramosDelDiaParaVista = this.mapearIntervalosBase(tramosDesdeBackend);

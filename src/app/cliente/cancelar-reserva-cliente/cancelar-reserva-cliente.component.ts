@@ -1,3 +1,4 @@
+// cancelar-reserva-cliente.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Tramo } from '../../shared/models/tramo.model';
@@ -8,7 +9,7 @@ import { takeUntil, finalize } from 'rxjs/operators';
 
 interface ReservaMostrable {
   idPrimerTramo: number;
-  citaId: number;
+  citaId: string;
   nombrePeluqueria: string;
   nombreEmpleado: string;
   fecha: string;
@@ -42,7 +43,6 @@ export class CancelarReservaClienteComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
-    console.log('Cliente logueado:', this.currentUser);
     if (this.currentUser?.id) {
       this.cargarReservasCliente(this.currentUser.id);
     } else {
@@ -56,33 +56,21 @@ export class CancelarReservaClienteComponent implements OnInit, OnDestroy {
     this.mensajeError = null;
     this.mensajeExito = null;
 
-    this.tramoService.getTramosByCliente(clienteId).pipe(
+    this.tramoService.getReservasPorCliente(clienteId).pipe(
       takeUntil(this.destroy$),
       finalize(() => this.isLoading = false)
     ).subscribe({
       next: (tramos: Tramo[]) => {
-        console.log('Tramos recibidos del backend:', tramos);
-
-        // ⚠️ Filtro más laxo para debug temporal
         const tramosFiltrados = tramos.filter(t =>
-          t.cliente?.id === clienteId
-        );
-
-        // ✅ Si todo funciona, puedes volver a este filtro más estricto:
-        /*
-        const hoy = new Date().toISOString().split('T')[0];
-        const tramosFiltrados = tramos.filter(t =>
-          t.citaId &&
-          t.fecha >= hoy &&
           !t.disponible &&
-          t.cliente?.id === clienteId
+          t.cliente?.id === clienteId &&
+          t.servicio?.id
         );
-        */
 
         this.reservasMostrables = this.procesarTramosParaMostrar(tramosFiltrados);
 
-        if (this.reservasMostrables.length === 0 && !this.mensajeError) {
-          this.mensajeError = "No tienes reservas futuras activas.";
+        if (this.reservasMostrables.length === 0) {
+          this.mensajeError = "No tienes reservas activas.";
         }
       },
       error: (err) => {
@@ -93,68 +81,61 @@ export class CancelarReservaClienteComponent implements OnInit, OnDestroy {
   }
 
   private procesarTramosParaMostrar(tramos: Tramo[]): ReservaMostrable[] {
-    const citasMap = new Map<number, Tramo[]>();
+    const agrupadas = new Map<string, Tramo[]>();
+    let contadorSinReserva = 1;
+
     tramos.forEach(tramo => {
-      const grupo = citasMap.get(tramo.citaId!) || [];
-      grupo.push(tramo);
-      citasMap.set(tramo.citaId!, grupo);
+      let clave = tramo.reservaId;
+      if (!clave) {
+        // Si no tiene reservaId, lo agrupamos por una clave temporal
+        clave = 'S/' + (tramo.fecha + '_' + tramo.horaInicio + '_' + (contadorSinReserva++));
+      }
+
+      if (!agrupadas.has(clave)) agrupadas.set(clave, []);
+      agrupadas.get(clave)?.push(tramo);
     });
 
     const resultado: ReservaMostrable[] = [];
-    citasMap.forEach((tramosDeCita, citaId) => {
-      if (tramosDeCita.length > 0) {
-        tramosDeCita.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
-        const primerTramo = tramosDeCita[0];
-        const ultimoTramo = tramosDeCita[tramosDeCita.length - 1];
-        resultado.push({
-          citaId,
-          idPrimerTramo: primerTramo.id!,
-          nombrePeluqueria: primerTramo.empleado?.peluqueria?.nombre || 'No especificada',
-          nombreEmpleado: primerTramo.empleado?.nombre || 'No especificado',
-          fecha: primerTramo.fecha,
-          horaInicio: primerTramo.horaInicio,
-          horaFin: ultimoTramo.horaFin,
-          nombreServicio: primerTramo.servicio?.nombre || 'Servicio no especificado',
-          precioServicio: primerTramo.servicio?.precio || 0,
-        });
-      }
+    agrupadas.forEach((grupo, clave) => {
+      grupo.sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+      const primero = grupo[0];
+      const ultimo = grupo[grupo.length - 1];
+
+      resultado.push({
+        citaId: clave,
+        idPrimerTramo: primero.id!,
+        nombrePeluqueria: primero.empleado?.peluqueria?.nombre || 'No especificada',
+        nombreEmpleado: primero.empleado?.nombre || 'No especificado',
+        fecha: primero.fecha,
+        horaInicio: primero.horaInicio,
+        horaFin: ultimo.horaFin,
+        nombreServicio: primero.servicio?.nombre || 'Servicio no especificado',
+        precioServicio: primero.servicio?.precio || 0
+      });
     });
 
-    resultado.sort((a, b) => {
-      const dateComparison = a.fecha.localeCompare(b.fecha);
-      return dateComparison !== 0 ? dateComparison : a.horaInicio.localeCompare(b.horaInicio);
-    });
-
-    return resultado;
+    return resultado.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horaInicio.localeCompare(b.horaInicio));
   }
 
   cancelarReserva(idPrimerTramo: number): void {
-    const reserva = this.reservasMostrables.find(r => r.idPrimerTramo === idPrimerTramo);
-    let confirmMsg = "¿Estás seguro de que quieres cancelar esta reserva?";
-    if (reserva) {
-      const fecha = this.datePipe.transform(reserva.fecha, 'dd/MM/yyyy', 'es-ES');
-      confirmMsg = `¿Estás seguro de cancelar tu reserva para "${reserva.nombreServicio}" el ${fecha} a las ${reserva.horaInicio}?`;
-    }
+    if (!confirm('¿Estás seguro de que deseas cancelar esta reserva?')) return;
 
-    if (confirm(confirmMsg)) {
-      this.isLoading = true;
-      this.mensajeError = null;
-      this.mensajeExito = null;
+    this.isLoading = true;
+    this.mensajeExito = null;
+    this.mensajeError = null;
 
-      this.tramoService.cancelarReserva(idPrimerTramo).pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.isLoading = false)
-      ).subscribe({
-        next: () => {
-          this.mensajeExito = 'Reserva cancelada con éxito.';
-          if (this.currentUser?.id) this.cargarReservasCliente(this.currentUser.id);
-        },
-        error: (err) => {
-          this.mensajeError = 'Error al cancelar la reserva: ' + (err.error?.message || err.message);
-          console.error(err);
-        }
-      });
-    }
+    this.tramoService.cancelarReserva(idPrimerTramo).pipe(
+      takeUntil(this.destroy$),
+      finalize(() => this.isLoading = false)
+    ).subscribe({
+      next: () => {
+        this.mensajeExito = 'Reserva cancelada con éxito.';
+        if (this.currentUser?.id) this.cargarReservasCliente(this.currentUser.id);
+      },
+      error: (err) => {
+        this.mensajeError = 'Error al cancelar la reserva: ' + (err.error?.message || err.message);
+      }
+    });
   }
 
   ngOnDestroy(): void {

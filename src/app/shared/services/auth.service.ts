@@ -135,12 +135,13 @@ export class AuthService {
   }
 
   registerCliente(cliente: Cliente): Observable<Cliente> {
-    return this.http.post<Cliente>(
-      `${this.backendUrl}${this.apiPrefix}/clientes/register`,
-      cliente,
-      { withCredentials: true }
-    );
-  }
+  return this.http.post<Cliente>(
+    `${this.backendUrl}${this.apiPrefix}/clientes/register`,
+    cliente,
+    { withCredentials: true }
+  );
+}
+
 
   registerEmpleado(empleado: Empleado): Observable<Empleado> {
     return this.http.post<Empleado>(

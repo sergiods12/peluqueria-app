@@ -10,6 +10,7 @@ export interface Tramo {
   horaInicio: string; // Se manejará como string HH:MM para LocalTime
   horaFin: string; // Se manejará como string HH:MM para LocalTime
   disponible: boolean; // Indica si el tramo está bloqueado por el empleado o no
+  reservaId?: string;
   empleado?: Empleado; // Representa la relación ManyToOne con Empleado
   cliente?: Cliente;   // Representa la relación ManyToOne con Cliente
   servicio?: Servicio; // Representa la relación ManyToOne con Servicio
